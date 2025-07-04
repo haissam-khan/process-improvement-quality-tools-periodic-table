@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C-IMP and Quality Tools Periodic Table</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background-color: #f0f4f8; /* Light blue-gray background */
+        }
+        .periodic-table-grid {
+            display: grid;
+            grid-template-rows: repeat(11, 1fr);
+            grid-template-columns: repeat(18, minmax(0, 1fr));
+            gap: 5px;
+            padding: 10px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .table-cell {
+            aspect-ratio: 1 / 1.25;
+            border: 1px solid #b0bec5;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 2px;
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, opacity 0.3s ease;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.07);
+            overflow: hidden;
+            text-align: center;
+        }
+        .table-cell:hover {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.12);
+            z-index: 10;
+        }
+        .tool-number {
+            font-size: 0.55rem;
+            opacity: 0.7;
+            width: 100%;
+            text-align: left;
+            padding-left: 4px;
+            padding-top: 1px;
+            height: 15%;
+        }
+        .tool-symbol {
+            font-size: clamp(1rem, 2vw, 1.5rem);
+            font-weight: 700;
+            line-height: 1;
+            margin-top: 1px;
+            margin-bottom: 2px;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .tool-name {
+            font-size: clamp(0.5rem, 1.5vw, 0.6rem);
+            word-break: break-word;
+            line-height: 1.1;
+            padding-bottom: 2px;
+            width: 100%;
+            margin-top: auto;
+            height: 35%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .empty-cell {
+            background-color: transparent;
+            border: none;
+            cursor: default;
+            box-shadow: none;
+        }
+        .empty-cell:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        .filtered-out {
+            opacity: 0.15;
+            pointer-events: none;
+        }
+        .highlighted, .suggested-highlight {
+            opacity: 1 !important;
+            box-shadow: 0 0 0 3px #0055A4;
+            transform: scale(1.05);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.65);
+            padding: 20px 0;
+        }
+        .modal-content {
+            background-color: #fff;
+            margin: 2% auto;
+            padding: 20px 25px;
+            border: 1px solid #78909c;
+            width: 90%;
+            max-width: 750px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        .close-button {
+            color: #90a4ae;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 32px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .close-button:focus, .close-button:hover {
+            color: #37474f;
+        }
+        .modal-section h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 12px;
+            margin-bottom: 6px;
+            color: #2c3e50;
+            border-bottom: 2px solid #eceff1;
+            padding-bottom: 4px;
+        }
+        .modal-section div, .modal-section p, .modal-section ul {
+            font-size: .8rem;
+            line-height: 1.5;
+            color: #34495e;
+        }
+        .modal-section ul {
+            list-style-type: disc;
+            padding-left: 25px;
+            margin-top: 5px;
+        }
+        .modal-section a {
+            color: #0055a4;
+            text-decoration: underline;
+            word-break: break-all;
+            display: block;
+            margin-bottom: 5px;
+            font-size: .8rem;
+        }
+        .modal-title-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #cfd8dc;
+        }
+        .modal-tool-symbol {
+            font-size: 1.8rem;
+            font-weight: 700;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-right: 15px;
+            color: #fff;
+            min-width: 70px;
+            text-align: center;
+        }
+        .modal-tool-name-full {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1a2b48;
+        }
+        .controls-area {
+            padding: 10px 15px;
+            background-color: #e3eaf2;
+            border-bottom: 2px solid #c5d2e0;
+            margin-bottom: 10px;
+        }
+        #searchToolInput {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #b0bec5;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: .9rem;
+        }
+        .legend-section-title {
+            font-weight: 600;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            font-size: .9rem;
+            color: #37474f;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            gap: 6px;
+            margin: 0 auto;
+            padding: 5px 0;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: .75rem;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color .2s, box-shadow .2s, transform .1s;
+            border: 1px solid rgba(0,0,0,.1);
+            box-shadow: 0 1px 2px rgba(0,0,0,.05);
+        }
+        .legend-item:hover {
+            box-shadow: 0 2px 4px rgba(0,0,0,.1);
+            transform: translateY(-1px);
+        }
+        .legend-item.active-filter {
+            box-shadow: 0 0 0 2.5px #0055A4, 0 2px 5px rgba(0,0,0,.2);
+            font-weight: 700;
+            transform: translateY(-1px);
+        }
+        .header-al {
+            background-color: #0055a4;
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+            margin-bottom: 0;
+        }
+        .header-al h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+        }
+        .footer-al {
+            text-align: center;
+            padding: 10px;
+            font-size: .7rem;
+            color: #546e7a;
+            margin-top: 15px;
+            border-top: 1px solid #cfd8dc;
+        }
+        .footer-al p {
+            margin: 3px 0;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0); }
+            100% { transform: rotate(360deg); }
+        }
+        @media (max-width: 1200px) {
+            .periodic-table-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+        }
+        @media (max-width: 900px) {
+            .periodic-table-grid { grid-template-columns: repeat(9, minmax(0, 1fr)); }
+            .tool-symbol { font-size: clamp(.9rem, 1.8vw, 1.1rem); }
+            .tool-name { font-size: clamp(.45rem, 1.3vw, .52rem); }
+            .header-al h1 { font-size: 1.3rem; }
+            .modal-tool-name-full { font-size: 1.3rem; }
+            .legend-item { font-size: .7rem; }
+        }
+        @media (max-width: 600px) {
+            .periodic-table-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px; }
+            .tool-symbol { font-size: clamp(.8rem, 2.5vw, 1rem); }
+            .tool-name { font-size: clamp(.42rem, 2vw, .5rem); }
+            .tool-number { font-size: .45rem; }
+            .modal-content { width: 95%; margin: 10px auto; padding: 15px; }
+            .modal-tool-symbol { font-size: 1.3rem; padding: 6px 9px; margin-right: 8px; }
+            .modal-tool-name-full { font-size: 1.1rem; }
+            .header-al h1 { font-size: 1.2rem; }
+            .legend-item { font-size: .68rem; padding: 3px 6px; }
+        }
+        @media (max-width: 400px) {
+            .periodic-table-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            .tool-symbol { font-size: clamp(.7rem, 3vw, .9rem); }
+            .legend-item { font-size: .65rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header-al flex items-center justify-between py-2 px-6">
+        <div class="w-56 text-left font-semibold text-lg">
+             <span id="headerLogo">Solutions by Haissam</span>
+        </div>
+        <h1 id="mainTitle" class="text-xl md:text-2xl font-semibold text-center flex-grow">
+            C-IMP and Quality Tools Periodic Table
+        </h1>
+        <div class="w-56 text-right">
+             <button id="languageToggleBtn" class="px-3 py-2 bg-white text-[#0055A4] font-semibold rounded-lg hover:bg-gray-200 text-sm focus:outline-none">日本語に切り替え</button>
+        </div>
+    </header>
+    
+    <div class="controls-area">
+        <input type="text" id="searchToolInput" placeholder="Search by tool name or symbol...">
+        <div id="categoryLegendTitle" class="legend-section-title">Filter by Category:</div>
+        <div id="categoryLegendDisplay" class="legend"></div>
+        <div id="dmaicLegendTitle" class="legend-section-title">Filter by DMAIC Phase:</div>
+        <div id="dmaicLegendDisplay" class="legend"></div>
+        <div id="difficultyLegendTitle" class="legend-section-title">Filter by Difficulty:</div>
+        <div id="difficultyLegendDisplay" class="legend"></div>
+    </div>
+
+    <div id="periodicTable" class="periodic-table-grid"></div>
+
+    <div class="max-w-4xl mx-auto p-4 bg-white rounded-lg shadow-md my-4">
+        <label for="problemDescription" id="suggesterTitle" class="block text-sm font-bold text-gray-700 mb-2">✨ AI Tool Suggester</label>
+        <p id="suggesterDescription" class="text-xs text-gray-500 mb-2">Describe a C-IMP challenge or quality problem you're facing, and I'll suggest some relevant tools to help.</p>
+        <textarea id="problemDescription" rows="3" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 'Frequent delays in shipping documents from one entity are causing issues for the other entity's equipment reception at port and project schedules.'"></textarea>
+        <div id="suggestionErrorMsg" class="text-red-600 text-xs mt-1 hidden"></div>
+        <div id="suggestionControls" class="flex items-center justify-end mt-2 space-x-2">
+            <button id="suggestBtn" onclick="suggestTools()" class="px-4 py-2 bg-[#0055A4] text-white font-semibold rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">Suggest Tools ✨</button>
+             <button id="clearBtn" onclick="clearSuggestion()" class="px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75">Clear</button>
+        </div>
+        <div id="suggestionLoader" class="hidden my-2"><div class="loader mx-auto"></div></div>
+        <div id="suggestionResult" class="mt-3 text-sm"></div>
+        <div id="suggestedToolsContainer" class="mt-4 space-y-2"></div>
+        <div id="actionPlanResult" class="mt-4 text-sm"></div>
+    </div>
+
+    <div id="toolModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal()">&times;</span>
+            <div class="modal-title-bar">
+                <div id="modalToolSymbol" class="modal-tool-symbol"></div>
+                <h2 id="modalToolNameFull" class="modal-tool-name-full"></h2>
+            </div>
+            <div class="modal-section"><h3 data-translate="categories">Categories</h3><p id="modalToolCategories"></p></div>
+            <div class="modal-section"><h3 data-translate="dmaicPhases">DMAIC Phase(s)</h3><p id="modalDmaicPhase"></p></div>
+            <div class="modal-section"><h3 data-translate="purpose">Purpose</h3><p id="modalPurpose"></p></div>
+            <div class="modal-section"><h3 data-translate="description">Description</h3><div id="modalDescription"></div></div>
+            <div class="modal-section">
+                <div class="flex justify-between items-center">
+                    <h3 data-translate="aiExplanationTitle">✨ Simple Explanation</h3>
+                    <button id="explainToolBtn" class="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-1 rounded-md hover:bg-blue-200" data-translate="explainThisTool">Explain This Tool ✨</button>
+                </div>
+                <div id="aiExplanationLoader" class="hidden my-2"><div class="loader"></div></div>
+                <div id="aiExplanation" class="mt-2 text-gray-600 bg-gray-50 p-2 rounded-md border border-gray-200" data-translate-placeholder="aiExplanationPlaceholder">Click the button to generate a simple, practical explanation.</div>
+            </div>
+            <div class="modal-section"><h3 data-translate="relatedTools">Related Tools</h3><p id="modalRelatedTools"></p></div>
+            <div class="modal-section" id="modalMoreInfoSection">
+                <h3 data-translate="moreInfo">More Information</h3>
+                <div id="modalLinksContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer-al">
+        <p id="footerLine1">Prepared by Haissam - engr.haissam@gmail.com</p>
+        <p id="footerLine2"> </p>
+    </footer>
+
+<script>
+    // --- BILINGUAL TRANSLATION & CONFIG ---
+    const translations = {
+        en: {
+            mainTitle:"Process Improvement and Quality Tools Periodic Table",headerLogo:"Solutions by Haissam",languageToggle:"日本語に切り替え",searchInputPlaceholder:"Search by tool name or symbol...",categoryLegendTitle:"Filter by Category:",dmaicLegendTitle:"Filter by DMAIC Phase:",difficultyLegendTitle:"Filter by Difficulty:",suggesterTitle:"✨ AI Tool Suggester",suggesterDescription:"Describe a C-IMP challenge or quality problem you're facing, and I'll suggest some relevant tools to help.",suggesterPlaceholder:"e.g., 'Frequent delays in shipping documents from one entity are causing issues for the other entity's equipment reception at port and project schedules.'",suggestBtn:"Suggest Tools ✨",clearBtn:"Clear",showAll:"Show All",cimpTools:"C-IMP Tools (*)",actionPlanBtn:"Create Action Plan",modal:{difficulty:"Difficulty",categories:"Categories",dmaicPhases:"DMAIC Phase(s)",purpose:"Purpose",description:"Description",aiExplanationTitle:"✨ Simple Explanation",explainThisTool:"Explain This Tool ✨",aiExplanationPlaceholder:"Click the button to generate a simple, practical explanation.",relatedTools:"Related Tools",moreInfo:"More Information",viewALResource:"View C-IMP Resource",viewExternalResource:"View External Resource",aiError:"Sorry, I could not generate an explanation at this time.",suggestionError:"Sorry, I could not generate suggestions at this time.",suggestionParseError:"Could not understand the suggestion from the AI.",problemDescriptionAlert:"Please describe your problem first.",actionPlanError:"Sorry, I could not generate an action plan at this time."},footerLine1:"Prepared by Haissam - engr.haissam@gmail.com",footerLine2:" ",dmaic:{Define:"Define",Measure:"Measure",Analyze:"Analyze",Improve:"Improve",Control:"Control"},difficultyLevels:{Beginner:"Beginner",Intermediate:"Intermediate",Advanced:"Advanced",Expert:"Expert"}
+        },
+        ja: {
+            mainTitle:"C-IMP・品質ツール周期表",headerLogo:"日本エア・リキード",languageToggle:"Switch to English",searchInputPlaceholder:"ツール名または記号で検索...",categoryLegendTitle:"カテゴリーで絞り込み:",dmaicLegendTitle:"DMAICフェーズで絞り込み:",difficultyLegendTitle:"難易度で絞り込み:",suggesterTitle:"✨ AIツール提案機能",suggesterDescription:"直面しているC-IMPの課題や品質問題を説明してください。関連するツールを提案します。",suggesterPlaceholder:"例：「一方の事業体からの出荷書類が頻繁に遅延するため、他方の事業体の港での設備受け入れやプロジェクトのスケジュールに問題が生じている。」",suggestBtn:"ツールを提案 ✨",clearBtn:"クリア",showAll:"すべて表示",cimpTools:"C-IMPツール (*)",actionPlanBtn:"実行計画を作成",modal:{difficulty:"難易度",categories:"カテゴリー",dmaicPhases:"DMAICフェーズ",purpose:"目的",description:"説明",aiExplanationTitle:"✨ 簡単な説明",explainThisTool:"このツールを説明 ✨",aiExplanationPlaceholder:"ボタンをクリックして、簡単で実用的な説明を生成します。",relatedTools:"関連ツール",moreInfo:"詳細情報",viewALResource:"エア・リキード C-IMPリソースを表示",viewExternalResource:"外部リンクを表示",aiError:"申し訳ありませんが、現在説明を生成できませんでした。",suggestionError:"申し訳ありませんが、現在提案を生成できませんでした。",suggestionParseError:"AIからの提案を解釈できませんでした。",problemDescriptionAlert:"まず問題を説明してください。",actionPlanError:"申し訳ありませんが、現在、実行計画を生成できませんでした。"},footerLine1:"日本エア・リキード - C-IMPイニシアチブのために開発",footerLine2:"作成者: Haissam - haissam.khan@airliquide.com",dmaic:{Define:"定義",Measure:"測定",Analyze:"分析",Improve:"改善",Control:"管理"},difficultyLevels:{Beginner:"初級",Intermediate:"中級",Advanced:"上級",Expert:"専門家"}
+        }
+    };
+    
+    // --- STYLING CONFIGURATION ---
+    const categoryStyles={"Basic Quality Tool":{bg:"bg-sky-500",text:"text-white"},"Advanced Quality Tool":{bg:"bg-indigo-500",text:"text-white"},"Six Sigma Tools":{bg:"bg-green-600",text:"text-white"},"Lean Management":{bg:"bg-orange-500",text:"text-white"},"Problem Identification":{bg:"bg-rose-500",text:"text-white"},"Data Analysis":{bg:"bg-teal-500",text:"text-white"},"Project Management":{bg:"bg-blue-700",text:"text-white"},"Decision-Making":{bg:"bg-yellow-400",text:"text-black"},"Quality Systems":{bg:"bg-purple-600",text:"text-white"},"Process Management":{bg:"bg-lime-500",text:"text-black"},"C-IMP Tool":{bg:"bg-[#0055A4]",text:"text-white"},Default:{bg:"bg-slate-400",text:"text-black"}};
+    
+    const difficultyStyles = {
+        Beginner: { bg: "bg-sky-500", text: "text-white" },
+        Intermediate: { bg: "bg-green-600", text: "text-white" },
+        Advanced: { bg: "bg-indigo-600", text: "text-white" },
+        Expert: { bg: "bg-rose-600", text: "text-white" },
+        Default: {bg: "bg-slate-400", text: "text-black"}
+    };
+
+    // --- TOOL DIFFICULTY DATA ---
+    const toolDifficultyData = {
+        "Check Sheet": "Beginner", "Control Chart": "Intermediate", "Histogram": "Beginner", "Scatter Diagram": "Beginner", "Flow Chart": "Beginner", "Stratification": "Beginner", "Run Chart": "Beginner", "Affinity Diagram": "Intermediate", "Interrelationship Diagram": "Advanced", "Tree Diagram": "Intermediate", "Prioritization Matrix": "Intermediate", "Matrix Diagram": "Intermediate", "Process Decision Program Chart": "Advanced", "Activity Network Diagram": "Advanced", "DMAIC": "Expert", "DMADV": "Expert", "SIPOC": "Beginner", "Critical to Quality Tree": "Intermediate", "Failure Mode and Effects Analysis": "Advanced", "Measurement System Analysis": "Advanced", "Design of Experiments": "Expert", "Hypothesis Testing": "Advanced", "Capability Analysis": "Advanced", "Gage R&R": "Advanced", "Process Mapping": "Beginner", "Control Plan": "Intermediate", "Pugh Matrix": "Advanced", "5S Methodology": "Beginner", "Value Stream Mapping": "Advanced", "A3 Problem Solving": "Intermediate", "Plan-Do-Check-Act": "Beginner", "Design for Six Sigma": "Expert", "TRIZ": "Expert", "Quality Circles": "Intermediate", "Statistical Process Control": "Advanced", "Sampling": "Intermediate", "Geometric Dimensioning and Tolerancing": "Expert", "Project Charter": "Beginner", "Exploratory Data Analysis": "Intermediate", "Key Performance Indicators": "Beginner", "Break-even Analysis": "Intermediate", "Robust Design": "Expert", "Voice of Customer": "Beginner", "Scope": "Beginner", "Pareto Chart": "Beginner", "5W2H": "Beginner", "SMART Goals": "Beginner", "Process Map (VSM-Light)": "Beginner", "8 Wastes": "Beginner", "Swimlane Diagram": "Beginner", "Handover Chart": "Beginner", "Spaghetti Chart": "Beginner", "Basic Statistics": "Beginner", "Summary of Findings": "Beginner", "Brainstorming": "Beginner", "Root Cause Analysis": "Intermediate", "Fishbone Diagram": "Beginner", "5 Whys": "Beginner", "Pick Chart": "Beginner", "Error Proofing (Poka-Yoke)": "Intermediate", "Implementation Plan": "Beginner", "Standardization": "Intermediate", "RACI Chart": "Beginner", "Communication Plan": "Beginner", "Validations / Check Point": "Beginner", "Kanban": "Intermediate", "Kaizen": "Intermediate", "Gemba Walk": "Beginner", "Heijunka": "Advanced", "Standardized Work": "Intermediate", "Takt Time": "Intermediate", "Single Minute Exchange of Die": "Advanced", "Total Productive Maintenance": "Advanced", "Just-In-Time": "Advanced", "Andon": "Beginner", "Jidoka": "Intermediate", "Kata": "Advanced", "Obeya": "Intermediate", "Toyota Production System": "Expert", "Nagara System": "Advanced", "Nemawashi": "Intermediate", "Overall Equipment Effectiveness": "Intermediate", "Shadow Board": "Beginner", "Visual Factory": "Intermediate", "Nominal Group Technique": "Intermediate", "Benchmarking": "Intermediate", "SWOT Analysis": "Beginner", "Gap Analysis": "Beginner", "Mind Mapping": "Beginner", "Multi-Vari Chart": "Advanced", "Regression Analysis": "Advanced", "Analysis of Variance": "Advanced", "Correlation Analysis": "Advanced", "Box Plot": "Intermediate", "Time Series Analysis": "Advanced", "Gantt Chart": "Beginner", "Critical Path Method": "Advanced", "Risk Assessment Matrix": "Intermediate", "Stakeholder Analysis": "Beginner", "Work Breakdown Structure": "Beginner", "Program Evaluation and Review Technique": "Advanced", "Milestone Chart": "Beginner", "Resource Histogram": "Intermediate", "Earned Value Management": "Advanced", "Decision Matrix": "Intermediate", "Force Field Analysis": "Intermediate", "Cost-Benefit Analysis": "Intermediate", "Delphi Method": "Advanced", "Decision Tree": "Intermediate", "Paired Comparison Analysis": "Intermediate", "Grid Analysis": "Intermediate", "Plus/Minus/Interesting": "Beginner", "ISO 9001": "Expert", "Quality Manual": "Intermediate", "Process Auditing": "Intermediate", "Management Review": "Intermediate", "Corrective and Preventive Action": "Intermediate", "Document Control": "Beginner", "Quality Policy": "Beginner", "Quality Objectives": "Beginner", "Quality Planning": "Intermediate", "Quality Assurance": "Intermediate", "Audits": "Intermediate", "8 Disciplines of Problem Solving": "Advanced", "Quality Function Deployment": "Expert", "Kano Model": "Advanced", "Customer Surveys": "Beginner", "Net Promoter Score": "Beginner", "Customer Journey Mapping": "Intermediate", "Service Blueprinting": "Intermediate", "Empathy Mapping": "Beginner", "Customer Segmentation": "Intermediate", "Conjoint Analysis": "Expert"
+    };
+
+    // --- FULL BILINGUAL MASTER TOOL DATA SOURCE ---
+    // PASTE THE masterToolDetails ARRAY HERE
+    const masterToolDetails = [
+        {"id":1,"symbol":"CS","name":{"en":"Check Sheet","ja":"チェックシート"},"category":{"en":"Basic Quality Tool, Data Analysis","ja":"基本的な品質ツール, データ分析"},"dmaicPhase":{"en":"Measure, Analyze","ja":"測定, 分析"},"purpose":{"en":"Structured data collection and analysis","ja":"構造的なデータ収集と分析"},"relatedTools":{"en":["Histogram","Pareto Chart"],"ja":["ヒストグラム","パレート図"]},"description":{"en":"A structured, prepared form for collecting and analyzing data. This is a generic data collection and analysis tool that can be adapted for a wide variety of purposes.","ja":"データを収集し分析するための、構造化され準備された帳票。これは、多種多様な目的に適合させることができる、汎用的なデータ収集・分析ツールです。"},"url":"https://asq.org/quality-resources/check-sheet","alLinks":[]},
+        {"id":2,"symbol":"CC","name":{"en":"Control Chart","ja":"管理図"},"category":{"en":"Basic Quality Tool, Data Analysis, Six Sigma Tools","ja":"基本的な品質ツール, データ分析, シックスシグマツール"},"dmaicPhase":{"en":"Control, Measure, Analyze","ja":"管理, 測定, 分析"},"purpose":{"en":"Monitor process variation over time","ja":"プロセスのばらつきを時系列で監視する"},"relatedTools":{"en":["Statistical Process Control","Capability Analysis"],"ja":["統計的工程管理","工程能力分析"]},"description":{"en":"A graph used to study how a process changes over time. Data are plotted in time order. It always has a central line for the average, an upper line for the upper control limit, and a lower line for the lower control limit.","ja":"プロセスが時間とともにどのように変化するかを調査するためのグラフ。データは時間順にプロットされます。中心線（平均）、上方管理限界線、下方管理限界線が必ずあります。"},"url":"https://asq.org/quality-resources/control-chart","alLinks":[]},
+        {"id":3,"symbol":"H","name":{"en":"Histogram","ja":"ヒストグラム"},"category":{"en":"Basic Quality Tool, Data Analysis","ja":"基本的な品質ツール, データ分析"},"dmaicPhase":{"en":"Measure, Analyze","ja":"測定, 分析"},"purpose":{"en":"Shows frequency distribution of data","ja":"データの度数分布を示す"},"relatedTools":{"en":["Check Sheet","Capability Analysis"],"ja":["チェックシート","工程能力分析"]},"description":{"en":"The most commonly used graph to show frequency distributions. It looks very much like a bar chart, but there are important differences.","ja":"度数分布を示すために最も一般的に使用されるグラフ。棒グラフに非常によく似ていますが、重要な違いがあります。"},"url":"https://asq.org/quality-resources/histogram","alLinks":[]},
+        {"id":4,"symbol":"SD","name":{"en":"Scatter Diagram","ja":"散布図"},"category":{"en":"Basic Quality Tool, Data Analysis","ja":"基本的な品質ツール, データ分析"},"dmaicPhase":{"en":"Analyze","ja":"分析"},"purpose":{"en":"Shows relationship between two variables","ja":"2つの変数間の関係を示す"},"relatedTools":{"en":["Correlation Analysis","Regression Analysis"],"ja":["相関分析","回帰分析"]},"description":{"en":"Graphs pairs of numerical data, with one variable on each axis, to look for a relationship between them.","ja":"数値データのペアを、各軸に1つの変数を置いてグラフ化し、それらの関係を探します。"},"url":"https://asq.org/quality-resources/scatter-diagram","alLinks":[]},
+        {"id":5,"symbol":"FC","name":{"en":"Flow Chart","ja":"フローチャート"},"category":{"en":"Basic Quality Tool, Process Management","ja":"基本的な品質ツール, プロセスマネジメント"},"dmaicPhase":{"en":"Define, Measure, Analyze, Improve","ja":"定義, 測定, 分析, 改善"},"purpose":{"en":"Visualizes process steps and flows","ja":"プロセスのステップと流れを視覚化する"},"relatedTools":{"en":["Process Mapping","SIPOC","Value Stream Mapping"],"ja":["プロセスマッピング","SIPOC","バリューストリームマッピング"]},"description":{"en":"A picture of the separate steps of a process in sequential order.","ja":"プロセスの各ステップを順序立てて図示したもの。"},"url":"https://asq.org/quality-resources/flowchart","alLinks":[]},
+        {"id":6,"symbol":"STF","name":{"en":"Stratification","ja":"層別"},"category":{"en":"Basic Quality Tool, Data Analysis","ja":"基本的な品質ツール, データ分析"},"dmaicPhase":{"en":"Analyze, Measure","ja":"分析, 測定"},"purpose":{"en":"Separates data into categories to reveal patterns or sources of variation","ja":"データをカテゴリに分けて、パターンやばらつきの原因を明らかにする"},"relatedTools":{"en":["Histogram","Pareto Chart"],"ja":["ヒストグラム","パレート図"]},"description":{"en":"The act of sorting data, people, and objects into distinct groups or layers. It is a technique used in combination with other data analysis tools.","ja":"データ、人、物を明確なグループや層に分類する行為。他のデータ分析ツールと組み合わせて使用される手法です。"},"url":"https://asq.org/quality-resources/stratification","alLinks":[]},
+        {"id":7,"symbol":"RUN","name":{"en":"Run Chart","ja":"ランチャート"},"category":{"en":"Basic Quality Tool, Data Analysis","ja":"基本的な品質ツール, データ分析"},"dmaicPhase":{"en":"Measure, Analyze","ja":"測定, 分析"},"purpose":{"en":"Displays process performance over time to detect trends or shifts","ja":"時間経過によるプロセスパフォーマンスを表示し、傾向やシフトを検出する"},"relatedTools":{"en":["Control Chart","Line Graph"],"ja":["管理図","折れ線グラフ"]},"description":{"en":"A quality tool of choice when you want to do a quick, visual analysis of a problem. It helps monitor process data over time and display it in an easy-to-analyze manner.","ja":"問題の迅速な視覚的分析を行いたい場合に選択される品質ツール。プロセスデータを時系列で監視し、分析しやすい形で表示するのに役立ちます。"},"url":"https://asq.org/training/spqtrc2025asq-qtools-run-chart","alLinks":[]},
+        {"id":8,"symbol":"AD","name":{"en":"Affinity Diagram","ja":"親和図"},"category":{"en":"Advanced Quality Tool, Problem Identification","ja":"高度な品質ツール, 問題特定"},"dmaicPhase":{"en":"Define, Analyze","ja":"定義, 分析"},"purpose":{"en":"Organizes large amounts of data into groups","ja":"大量のデータをグループに整理する"},"relatedTools":{"en":["Brainstorming","Mind Mapping"],"ja":["ブレーンストーミング","マインドマッピング"]},"description":{"en":"Organizes a large number of ideas into their natural relationships. It is the organized output from a brainstorming session.","ja":"多くのアイデアを自然な関係性に基づいて整理します。これは、ブレーンストーミングセッションから整理されたアウトプットです。"},"url":"https://asq.org/quality-resources/affinity","alLinks":[]},
+        {"id":9,"symbol":"ID","name":{"en":"Interrelationship Diagram","ja":"連関図"},"category":{"en":"Advanced Quality Tool, Problem Identification","ja":"高度な品質ツール, 問題特定"},"dmaicPhase":{"en":"Analyze","ja":"分析"},"purpose":{"en":"Shows cause-and-effect relationships","ja":"因果関係を示す"},"relatedTools":{"en":["Cause-and-Effect Diagram","Affinity Diagram"],"ja":["特性要因図","親和図"]},"description":{"en":"A new management planning tool that depicts the relationship among factors in a complex situation and helps identify relationships that are not easily recognizable.","ja":"複雑な状況における要因間の関係を描写し、容易に認識できない関係性を特定するのに役立つ新しいマネジメント計画ツール。"},"url":"https://asq.org/quality-resources/relations-diagram","alLinks":[]},
+        {"id":10,"symbol":"TD","name":{"en":"Tree Diagram","ja":"系統図"},"category":{"en":"Advanced Quality Tool, Problem Identification, Project Management","ja":"高度な品質ツール, 問題特定, プロジェクトマネジメント"},"dmaicPhase":{"en":"Define, Analyze, Improve","ja":"定義, 分析, 改善"},"purpose":{"en":"Breaks down broad categories into finer levels of detail","ja":"大きなカテゴリーをより細かいレベルに分解する"},"relatedTools":{"en":["WBS","CTQ Tree"],"ja":["WBS","CTQツリー"]},"description":{"en":"A new management planning tool that depicts the hierarchy of tasks and subtasks needed to complete an objective. It starts with one item that branches into two or more.","ja":"目標を達成するために必要なタスクとサブタスクの階層を描写する新しいマネジメント計画ツール。1つの項目から始まり、2つ以上に分岐します。"},"url":"https://asq.org/quality-resources/tree-diagram","alLinks":[]},
+        {"id":11,"symbol":"PRTM","name":{"en":"Prioritization Matrix","ja":"優先順位付けマトリックス"},"category":{"en":"Advanced Quality Tool, Decision-Making","ja":"高度な品質ツール, 意思決定"},"dmaicPhase":{"en":"Analyze, Improve","ja":"分析, 改善"},"purpose":{"en":"Prioritizes items based on weighted criteria","ja":"重み付けされた基準に基づいて項目を優先順位付けする"},"relatedTools":{"en":["Decision Matrix","Pugh Matrix"],"ja":["決定マトリックス","ピューマトリックス"]},"description":{"en":"An L-shaped matrix that uses pairwise comparisons of a list of options to a set of criteria in order to choose the best option(s).","ja":"オプションのリストを一連の基準とペアで比較し、最適なオプションを選択するために使用されるL字型のマトリックス。"},"url":"https://asq.org/quality-resources/new-management-planning-tools","alLinks":[]},
+        {"id":12,"symbol":"MD","name":{"en":"Matrix Diagram","ja":"マトリックス図"},"category":{"en":"Advanced Quality Tool, Data Analysis, Decision-Making","ja":"高度な品質ツール, データ分析, 意思決定"},"dmaicPhase":{"en":"Analyze, Improve","ja":"分析, 改善"},"purpose":{"en":"Shows relationships between two or more sets of elements","ja":"2つ以上の要素のセット間の関係を示す"},"relatedTools":{"en":["House of Quality","Decision Matrix"],"ja":["品質の家","決定マトリックス"]},"description":{"en":"A new management planning tool used for analyzing and displaying the relationship between data sets. It shows the relationship between two, three, or four groups of information.","ja":"データセット間の関係を分析し表示するために使用される新しいマネジメント計画ツール。2つ、3つ、または4つの情報グループ間の関係を示します。"},"url":"https://asq.org/quality-resources/matrix-diagram","alLinks":[]},
+        {"id":13,"symbol":"PDPC","name":{"en":"Process Decision Program Chart","ja":"PDPC法"},"category":{"en":"Advanced Quality Tool, Project Management, Decision-Making","ja":"高度な品質ツール, プロジェクトマネジメント, 意思決定"},"dmaicPhase":{"en":"Improve, Control","ja":"改善, 管理"},"purpose":{"en":"Identifies risks and countermeasures for tasks","ja":"タスクのリスクと対策を特定する"},"relatedTools":{"en":["Risk Assessment Matrix","FMEA"],"ja":["リスク評価マトリックス","FMEA"]},"description":{"en":"A new management planning tool that systematically identifies what might go wrong in a plan under development. Countermeasures are developed to prevent or offset those problems.","ja":"開発中の計画で何が問題になる可能性があるかを体系的に特定する新しいマネジメント計画ツール。それらの問題を防止または相殺するための対策が策定されます。"},"url":"https://asq.org/quality-resources/process-decision-program-chart","alLinks":[]},
+        {"id":14,"symbol":"AND","name":{"en":"Activity Network Diagram","ja":"アローダイアグラム"},"category":{"en":"Advanced Quality Tool, Project Management","ja":"高度な品質ツール, プロジェクトマネジメント"},"dmaicPhase":{"en":"Improve, Define","ja":"改善, 定義"},"purpose":{"en":"Plans appropriate sequence for tasks and subtasks","ja":"タスクとサブタスクの適切な順序を計画する"},"relatedTools":{"en":["Gantt Chart","Critical Path Method"],"ja":["ガントチャート","クリティカルパス法"]},"description":{"en":"A process diagramming tool used to determine optimal sequence of events, and their interconnectivity. It is used for scheduling and to determine the critical path through nodes.","ja":"イベントの最適な順序とその相互接続性を決定するために使用されるプロセス図作成ツール。スケジューリングやノードを通るクリティカルパスの決定に使用されます。"},"url":"https://asq.org/quality-resources/arrow-diagram","alLinks":[]},
+        {"id":15,"symbol":"DMAIC","name":{"en":"DMAIC","ja":"DMAIC"},"category":{"en":"Six Sigma Tools, Project Management","ja":"シックスシグマツール, プロジェクトマネジメント"},"dmaicPhase":{"en":"N/A","ja":"N/A"},"purpose":{"en":"Problem-solving methodology","ja":"問題解決の方法論"},"relatedTools":{"en":["Control Charts","FMEA","DOE"],"ja":["管理図","FMEA","実験計画法"]},"description":{"en":"A data-driven quality strategy used to improve processes. It stands for Define, Measure, Analyze, Improve, and Control.","ja":"プロセスを改善するために使用されるデータ駆動型の品質戦略。Define（定義）、Measure（測定）、Analyze（分析）、Improve（改善）、Control（管理）の略です。"},"url":"https://asq.org/quality-resources/dmaic","alLinks":[]},
+        {"id":16,"symbol":"DMADV","name":{"en":"DMADV","ja":"DMADV"},"category":{"en":"Six Sigma Tools, Project Management","ja":"シックスシグマツール, プロジェクトマネジメント"},"dmaicPhase":{"en":"N/A","ja":"N/A"},"purpose":{"en":"Design methodology","ja":"設計の方法論"},"relatedTools":{"en":["QFD","DOE","CTQ Tree"],"ja":["品質機能展開","実験計画法","CTQツリー"]},"description":{"en":"A data-driven quality strategy that focuses on the development of new products or services. It stands for Define, Measure, Analyze, Design, and Verify.","ja":"新製品やサービスの開発に焦点を当てたデータ駆動型の品質戦略。Define（定義）、Measure（測定）、Analyze（分析）、Design（設計）、Verify（検証）の略です。"},"url":"https://asq.org/quality-resources/dmaic (ASQ page discusses DMADV in relation to DMAIC)","alLinks":[]},
+        {"id":17,"symbol":"SIPOC","name":{"en":"SIPOC","ja":"SIPOC"},"category":{"en":"Six Sigma Tools, Project Management, Basic Quality Tool","ja":"シックスシグマツール, プロジェクトマネジメント, 基本的な品質ツール"},"dmaicPhase":{"en":"Define","ja":"定義"},"purpose":{"en":"Process mapping tool","ja":"プロセスのマッピングツール"},"relatedTools":{"en":["Value Stream Mapping","Flow Chart"],"ja":["バリューストリームマッピング","フローチャート"]},"description":{"en":"A data collection tool used by Six Sigma teams to gather information about suppliers, inputs, processes, outputs, and customers of a process.","ja":"シックスシグマチームがプロセスのサプライヤー、インプット、プロセス、アウトプット、顧客に関する情報を収集するために使用するデータ収集ツール。"},"url":"https://asq.org/quality-resources/sipoc","alLinks":[]},
+        {"id":18,"symbol":"CTQ","name":{"en":"Critical to Quality Tree","ja":"CTQツリー"},"category":{"en":"Six Sigma Tools","ja":"シックスシグマツール"},"dmaicPhase":{"en":"Define, Analyze","ja":"定義, 分析"},"purpose":{"en":"Translates customer needs into measurable requirements","ja":"顧客のニーズを測定可能な要件に変換する"},"relatedTools":{"en":["VOC","Tree Diagram"],"ja":["顧客の声","系統図"]},"description":{"en":"Critical to Quality (CTQ) factors represent business process performance. A CTQ tree is a hierarchical representation to break down broad customer needs into more specific...","ja":"Critical to Quality (CTQ) 因子は、ビジネスプロセスのパフォーマンスを表します。CTQツリーは、広範な顧客のニーズをより具体的なものに分解するための階層表現です..."},"url":"https://asq.org/quality-resources/articles/the-ins-and-outs-of-process-positioning?id=b2737584b8e84ecf9afd8e02d7a3f62b","alLinks":[]},
+        {"id":19,"symbol":"FMEA","name":{"en":"Failure Mode and Effects Analysis","ja":"FMEA"},"category":{"en":"Six Sigma Tools, Advanced Quality Tool, Project Management","ja":"シックスシグマツール, 高度な品質ツール, プロジェクトマネジメント"},"dmaicPhase":{"en":"Analyze, Improve, Control","ja":"分析, 改善, 管理"},"purpose":{"en":"Identifies potential failures","ja":"潜在的な故障を特定する"},"relatedTools":{"en":["Risk Assessment Matrix","PDPC"],"ja":["リスク評価マトリックス","PDPC法"]},"description":{"en":"A systematic, step-by-step approach to identify and prioritize possible failures in a design, manufacturing or assembly process, product, or service.","ja":"設計、製造、組立プロセス、製品、またはサービスにおける潜在的な故障を特定し、優先順位付けするための体系的で段階的なアプローチ。"},"url":"https://asq.org/quality-resources/fmea","alLinks":[]},
+        {"id":20,"symbol":"MSA","name":{"en":"Measurement System Analysis","ja":"測定システム分析 (MSA)"},"category":{"en":"Six Sigma Tools, Data Analysis","ja":"シックスシグマツール, データ分析"},"dmaicPhase":{"en":"Measure","ja":"測定"},"purpose":{"en":"Evaluates measurement system capability","ja":"測定システムの能力を評価する"},"relatedTools":{"en":["Gage R&R","Capability Analysis"],"ja":["ゲージR&R","工程能力分析"]},"description":{"en":"A study that evaluates a measurement system for an improvement project's critical-to-quality characteristic.","ja":"改善プロジェクトのCTQ（重要品質特性）に対する測定システムを評価する調査。"},"url":"https://asq.org/training/measurement-system-analysis--msa--msaasq","alLinks":[]},
+        {"id":21,"symbol":"DOE","name":{"en":"Design of Experiments","ja":"実験計画法 (DOE)"},"category":{"en":"Six Sigma Tools, Advanced Quality Tool, Data Analysis","ja":"シックスシグマツール, 高度な品質ツール, データ分析"},"dmaicPhase":{"en":"Analyze, Improve","ja":"分析, 改善"},"purpose":{"en":"Systematically tests different factors","ja":"さまざまな因子を体系的にテストする"},"relatedTools":{"en":["Hypothesis Testing","ANOVA"],"ja":["仮説検定","分散分析"]},"description":{"en":"A branch of applied statistics that deals with planning, conducting, analyzing, and interpreting controlled tests to evaluate the factors that control the value of a parameter...","ja":"パラメータの値を制御する因子を評価するための、計画、実施、分析、解釈を含む応用統計学の一分野..."},"url":"https://asq.org/quality-resources/design-of-experiments","alLinks":[]},
+        {"id":22,"symbol":"HT","name":{"en":"Hypothesis Testing","ja":"仮説検定"},"category":{"en":"Six Sigma Tools, Data Analysis","ja":"シックスシグマツール, データ分析"},"dmaicPhase":{"en":"Analyze","ja":"分析"},"purpose":{"en":"Statistical method to make decisions","ja":"意思決定を行うための統計的手法"},"relatedTools":{"en":["ANOVA","t-test"],"ja":["分散分析","t検定"]},"description":{"en":"A type of test that uses statistics to determine the probability that a given hypothesis is true.","ja":"統計を使用して、与えられた仮説が真である確率を決定するテストの一種。"},"url":"https://asq.org/training/hypothesis-testing-htasq","alLinks":[]},
+        {"id":23,"symbol":"CAPA","name":{"en":"Capability Analysis","ja":"工程能力分析"},"category":{"en":"Six Sigma Tools, Data Analysis","ja":"シックスシグマツール, データ分析"},"dmaicPhase":{"en":"Measure, Analyze, Control","ja":"測定, 分析, 管理"},"purpose":{"en":"Evaluates process capability","ja":"プロセスの能力を評価する"},"relatedTools":{"en":["Control Charts","Histogram"],"ja":["管理図","ヒストグラム"]},"description":{"en":"A statistical measure of the inherent process variability of a given characteristic. Used to assess the ability of a process to meet specifications.","ja":"与えられた特性の固有のプロセス変動の統計的尺度。プロセスが仕様を満たす能力を評価するために使用されます。"},"url":"https://asq.org/quality-resources/process-capability","alLinks":[]},
+        {"id":24,"symbol":"GRR","name":{"en":"Gage R&R","ja":"ゲージR&R"},"category":{"en":"Six Sigma Tools, Data Analysis","ja":"シックスシグマツール, データ分析"},"dmaicPhase":{"en":"Measure","ja":"測定"},"purpose":{"en":"Measurement system analysis technique","ja":"測定システム分析の手法"},"relatedTools":{"en":["MSA","Capability Analysis"],"ja":["測定システム分析 (MSA)","工程能力分析"]},"description":{"en":"Gage repeatability and reproducibility (GR&R) is the process used to evaluate a gauging instrument's accuracy by ensuring its measurements are repeatable and reproducible.","ja":"ゲージの繰り返し性（Repeatability）と再現性（Reproducibility）のことであり、測定機器の測定が繰り返し可能で再現可能であることを確認して、その精度を評価するプロセス。"},"url":"https://asq.org/quality-resources/gage-repeatability","alLinks":[]},
+        {"id":25,"symbol":"PROM","name":{"en":"Process Mapping","ja":"プロセスマッピング"},"category":{"en":"Six Sigma Tools, Basic Quality Tool, Process Management","ja":"シックスシグマツール, 基本的な品質ツール, プロセスマネジメント"},"dmaicPhase":{"en":"Define, Measure, Analyze, Improve","ja":"定義, 測定, 分析, 改善"},"purpose":{"en":"Documents process steps and flows","ja":"プロセスのステップと流れを文書化する"},"relatedTools":{"en":["Flow Chart","Value Stream Mapping"],"ja":["フローチャート","バリューストリームマッピング"]},"description":{"en":"An organized way to record all the activities performed by a person or machine, with a customer or on materials, presented as a flowchart or worksheet.","ja":"人や機械が、顧客や材料に対して行うすべての活動を記録するための体系的な方法で、フローチャートやワークシートとして提示されます。"},"url":"https://asq.org/quality-progress/articles/a-simple-process-map?id=33d4fa09a400477786d208ca4a6a3069","alLinks":[]},
+        {"id":26,"symbol":"CP","name":{"en":"Control Plan","ja":"コントロールプラン"},"category":{"en":"Six Sigma Tools, Quality Systems","ja":"シックスシグマツール, 品質システム"},"dmaicPhase":{"en":"Control","ja":"管理"},"purpose":{"en":"Documents control methods and reaction plans","ja":"管理方法と対応計画を文書化する"},"relatedTools":{"en":["FMEA","Control Charts"],"ja":["FMEA","管理図"]},"description":{"en":"A documented quality plan that translates customer requirements into actions required to produce the desired outcome, specifying what is needed, who will do it, and how it will be done.","ja":"顧客の要求を望ましい成果を生み出すための行動に変換する文書化された品質計画。何が必要か、誰がそれを行うか、どのように行うかを明記します。"},"url":"https://asq.org/quality-resources/quality-plans","alLinks":[]},
+        {"id":27,"symbol":"PuM","name":{"en":"Pugh Matrix","ja":"ピューマトリックス"},"category":{"en":"Six Sigma Tools, Decision-Making, Advanced Quality Tool","ja":"シックスシグマツール, 意思決定, 高度な品質ツール"},"dmaicPhase":{"en":"Improve, Analyze","ja":"改善, 分析"},"purpose":{"en":"Evaluates and selects the best concept","ja":"最適なコンセプトを評価し選択する"},"relatedTools":{"en":["Decision Matrix","Prioritization Matrix"],"ja":["決定マトリックス","優先順位付けマトリックス"]},"description":{"en":"A decision matrix where a baseline is established, and other alternatives are rated in comparison to the baseline using scores like worse (-1), same (0), or better (+1).","ja":"ベースラインが確立され、他の代替案が「悪い（-1）」「同じ（0）」「良い（+1）」のようなスコアを使用してベースラインと比較評価される決定マトリックス。"},"url":"https://asq.org/quality-resources/decision-matrix","alLinks":[]},
+        {"id":28,"symbol":"5S","name":{"en":"5S Methodology","ja":"5S"},"category":{"en":"Six Sigma Tools, Lean Management","ja":"シックスシグマツール, リーンマネジメント"},"dmaicPhase":{"en":"Improve, Control","ja":"改善, 管理"},"purpose":{"en":"Workplace organization and standardization","ja":"職場の整理整頓と標準化"},"relatedTools":{"en":["Visual Management","Standardized Work"],"ja":["目で見る管理","標準作業"]},"description":{"en":"Stands for sort, set in order, shine, standardize, and sustain. This method results in a workspace that is clean, uncluttered, safe, and well-organized. Originated as part of the Toyota Production System, derived from five Japanese terms (Seiri, Seiton, Seiso, Seiketsu, Shitsuke) used to create a safe and organized workplace.","ja":"整理、整頓、清掃、清潔、躾の頭文字をとったもの。この手法は、清潔で、整然とし、安全で、よく整理された職場環境をもたらします。トヨタ生産方式の一部として生まれ、安全で整理された職場を作るための5つの日本語（整理、整頓、清掃、清潔、躾）に由来します。"},"url":"https://asq.org/quality-resources/five-s-tutorial","alLinks":[]},
+        {"id":29,"symbol":"VSM","name":{"en":"Value Stream Mapping","ja":"バリューストリームマッピング (VSM)"},"category":{"en":"Six Sigma Tools, Lean Management, Process Management","ja":"シックスシグマツール, リーンマネジメント, プロセスマネジメント"},"dmaicPhase":{"en":"Define, Analyze, Improve","ja":"定義, 分析, 改善"},"purpose":{"en":"Visualizes material and information flow","ja":"物と情報の流れを視覚化する"},"relatedTools":{"en":["Process Mapping","SIPOC"],"ja":["プロセスマッピング","SIPOC"]},"description":{"en":"A lean tool that employs a flowchart documenting every step in the process. It is fundamental to identify waste, reduce process cycle times, and implement process improvement.","ja":"プロセス内のすべてのステップを文書化するフローチャートを用いるリーンツール。無駄を特定し、プロセスサイクルタイムを短縮し、プロセス改善を実施するための基本です。"},"url":"https://asq.org/quality-resources/lean/value-stream-mapping","alLinks":[]},
+        {"id":30,"symbol":"A3","name":{"en":"A3 Problem Solving","ja":"A3問題解決"},"category":{"en":"Six Sigma Tools, Problem Identification, Project Management","ja":"シックスシグマツール, 問題特定, プロジェクトマネジメント"},"dmaicPhase":{"en":"All DMAIC Phases (iterative)","ja":"全DMAICフェーズ (反復)"},"purpose":{"en":"Structured problem-solving approach","ja":"構造化された問題解決アプローチ"},"relatedTools":{"en":["PDCA","Root Cause Analysis"],"ja":["PDCA","根本原因分析"]},"description":{"en":"A systematic, often template-guided, approach to problem-solving and continuous improvement, typically summarized on a single A3-sized sheet of paper.","ja":"問題解決と継続的改善への体系的なアプローチで、多くの場合テンプレートに基づいており、通常はA3サイズの紙一枚に要約されます。"},"url":"https://www.robertkurek.com/post/quality-tools-a3-problem-solving","alLinks":[]},
+        {"id":31,"symbol":"PDCA","name":{"en":"Plan-Do-Check-Act","ja":"PDCAサイクル"},"category":{"en":"Six Sigma Tools, Project Management, Quality Systems","ja":"シックスシグマツール, プロジェクトマネジメント, 品質システム"},"dmaicPhase":{"en":"N/A (Iterative Cycle)","ja":"N/A (反復サイクル)"},"purpose":{"en":"Iterative four-step management method","ja":"反復的な4段階の管理手法"},"relatedTools":{"en":["DMAIC","Kaizen"],"ja":["DMAIC","カイゼン"]},"description":{"en":"A four-step model for carrying out change. Should be repeated again and again for continuous improvement. Also known as PDSA (Plan-Do-Study-Act).","ja":"変革を実行するための4段階モデル。継続的な改善のために何度も繰り返されるべきです。PDSA（Plan-Do-Study-Act）としても知られています。"},"url":"https://asq.org/quality-resources/pdca-cycle","alLinks":[]},
+        {"id":32,"symbol":"DFSS","name":{"en":"Design for Six Sigma","ja":"DFSS"},"category":{"en":"Six Sigma Tools, Project Management","ja":"シックスシグマツール, プロジェクトマネジメント"},"dmaicPhase":{"en":"N/A","ja":"N/A"},"purpose":{"en":"Designs products and processes to meet Six Sigma standards","ja":"シックスシグマ基準を満たす製品とプロセスを設計する"},"relatedTools":{"en":["DMADV","QFD"],"ja":["DMADV","品質機能展開"]},"description":{"en":"A business-process management method related to traditional Six Sigma that focuses on determining customer needs and driving them into product design. Often uses DMADV.","ja":"従来のシックスシグマに関連するビジネスプロセスマネジメント手法で、顧客のニーズを特定し、それを製品設計に反映させることに焦点を当てています。しばしばDMADVを使用します。"},"url":"https://asq.org/quality-resources/quality-glossary/d (see entry for Design for Six Sigma (DFSS))","alLinks":[]},
+        {"id":33,"symbol":"TRIZ","name":{"en":"TRIZ","ja":"TRIZ"},"category":{"en":"Six Sigma Tools, Advanced Quality Tool, Problem Identification","ja":"シックスシグマツール, 高度な品質ツール, 問題特定"},"dmaicPhase":{"en":"Analyze, Improve","ja":"分析, 改善"},"purpose":{"en":"Problem-solving, analysis and forecasting tool","ja":"問題解決、分析、予測ツール"},"relatedTools":{"en":["Brainstorming","Root Cause Analysis"],"ja":["ブレーンストーミング","根本原因分析"]},"description":{"en":"A systematic approach to creative thinking originating in Russia, based on the analysis of patterns of invention in the global patent literature.","ja":"ロシア発祥の創造的思考への体系的アプローチで、世界の特許文献における発明のパターンの分析に基づいています。"},"url":"https://asq.org/quality-progress/articles/triz-a-creative-breeze-for-quality-professionals?id=80ab39f0f63c4c53a3fc0070d6253443","alLinks":[]},
+        {"id":34,"symbol":"QC","name":{"en":"Quality Circles","ja":"QCサークル"},"category":{"en":"Six Sigma Tools, Problem Identification, Quality Systems","ja":"シックスシグマツール, 問題特定, 品質システム"},"dmaicPhase":{"en":"Improve, Analyze","ja":"改善, 分析"},"purpose":{"en":"Participative management technique","ja":"参加型経営手法"},"relatedTools":{"en":["Kaizen","Brainstorming"],"ja":["カイゼン","ブレーンストーミング"]},"description":{"en":"A group of workers who do the same or similar work, meeting regularly to identify, analyze and solve work-related problems. Popularized by Kaoru Ishikawa.","ja":"同じまたは類似の仕事をする労働者のグループが、定期的に会合を開き、仕事関連の問題を特定、分析、解決します。石川馨によって広められました。"},"url":"https://asq.org/about-asq/honorary-members/ishikawa","alLinks":[]},
+        {"id":35,"symbol":"SPC","name":{"en":"Statistical Process Control","ja":"統計的工程管理 (SPC)"},"category":{"en":"Six Sigma Tools, Data Analysis, Quality Systems","ja":"シックスシグマツール, データ分析, 品質システム"},"dmaicPhase":{"en":"Control, Measure, Analyze","ja":"管理, 測定, 分析"},"purpose":{"en":"Monitors and controls processes","ja":"プロセスを監視し、管理する"},"relatedTools":{"en":["Control Charts","Process Capability"],"ja":["管理図","工程能力"]},"description":{"en":"The use of statistical techniques to control a process or production method. SPC tools and procedures can help monitor process behavior and discover issues.","ja":"プロセスや生産方法を管理するための統計的手法の使用。SPCツールと手順は、プロセスの挙動を監視し、問題を発見するのに役立ちます。"},"url":"https://asq.org/quality-resources/statistical-process-control","alLinks":[]},
+        {"id":36,"symbol":"SMP","name":{"en":"Sampling","ja":"サンプリング"},"category":{"en":"Six Sigma Tools, Data Analysis","ja":"シックスシグマツール, データ分析"},"dmaicPhase":{"en":"Measure, Analyze","ja":"測定, 分析"},"purpose":{"en":"Selects a subset of data to draw conclusions about a population","ja":"母集団に関する結論を導き出すために、データのサブセットを選択する"},"relatedTools":{"en":["SPC","Hypothesis Testing"],"ja":["統計的工程管理 (SPC)","仮説検定"]},"description":{"en":"The selection of a set of elements from a target population or product lot. Used because gathering data on every member is often impossible or impractical.","ja":"対象となる母集団または製品ロットから要素のセットを選択すること。すべてのメンバーに関するデータを収集することが不可能または非現実的であるため使用されます。"},"url":"https://asq.org/quality-resources/sampling","alLinks":[]},
+        {"id":37,"symbol":"GD&T","name":{"en":"Geometric Dimensioning and Tolerancing","ja":"幾何公差 (GD&T)"},"category":{"en":"Six Sigma Tools, Quality Systems","ja":"シックスシグマツール, 品質システム"},"dmaicPhase":{"en":"Define, Control","ja":"定義, 管理"},"purpose":{"en":"Specifies allowable geometric variation in parts and assemblies","ja":"部品やアセンブリで許容される幾何学的変動を規定する"},"relatedTools":{"en":["Control Plan","FMEA"],"ja":["コントロールプラン","FMEA"]},"description":{"en":"A set of rules and standard symbols to define part features and relationships on an engineering drawing depicting the geometric relationship of part features...","ja":"部品の特徴間の幾何学的関係を描写するエンジニアリング図面上で、部品の特徴と関係を定義するための一連の規則と標準記号..."},"url":"https://asq.org/quality-resources/quality-glossary/g (see entry for Geometric dimensioning and tolerancing (GD&T))","alLinks":[]},
+        {"id":38,"symbol":"PCH","name":{"en":"Project Charter","ja":"プロジェクト憲章"},"category":{"en":"Six Sigma Tools, Project Management","ja":"シックスシグマツール, プロジェクトマネジメント"},"dmaicPhase":{"en":"Define","ja":"定義"},"purpose":{"en":"Defines scope, goals, and responsibilities for improvement projects","ja":"改善プロジェクトの範囲、目標、責任を定義する"},"relatedTools":{"en":["SIPOC","DMAIC"],"ja":["SIPOC","DMAIC"]},"description":{"en":"Defines the focus, scope, direction, and motivation for the improvement team. Used in the Define phase of DMAIC.","ja":"改善チームの焦点、範囲、方向性、動機を定義します。DMAICの定義（Define）フェーズで使用されます。"},"url":"https://asq.org/quality-resources/dmaic","alLinks":[]},
+        {"id":39,"symbol":"EDA","name":{"en":"Exploratory Data Analysis","ja":"探索的データ分析"},"category":{"en":"Six Sigma Tools, Data Analysis","ja":"シックスシグマツール, データ分析"},"dmaicPhase":{"en":"Analyze, Measure","ja":"分析, 測定"},"purpose":{"en":"Analyzes and visualizes data patterns before formal modeling","ja":"正式なモデリングの前にデータパターンを分析し、視覚化する"},"relatedTools":{"en":["Pareto Chart","Box Plot"],"ja":["パレート図","箱ひげ図"]},"description":{"en":"A special case of data analysis for quality improvement problems, often with freestyle text data, to extract useful information and identify hypotheses.","ja":"品質改善問題のためのデータ分析の特殊なケースで、しばしばフリースタイルのテキストデータを用いて、有用な情報を抽出し仮説を特定します。"},"url":"https://asq.org/quality-resources/articles/exploratory-text-data-analysis-for-quality-hypothesis-generation?id=93a8c26e0de641f08ee5d3a4862d7295","alLinks":[]},
+        {"id":40,"symbol":"KPI","name":{"en":"Key Performance Indicators","ja":"重要業績評価指標 (KPI)"},"category":{"en":"Six Sigma Tools, Project Management, Data Analysis","ja":"シックスシグマツール, プロジェクトマネジメント, データ分析"},"dmaicPhase":{"en":"Measure, Control, Define","ja":"測定, 管理, 定義"},"purpose":{"en":"Measures critical success factors to evaluate process performance","ja":"プロセスのパフォーマンスを評価するために重要な成功要因を測定する"},"relatedTools":{"en":["Dashboard","Process Metrics"],"ja":["ダッシュボード","プロセスメトリクス"]},"description":{"en":"Specific metrics critical to determining how well an organization is performing. Essential for driving operational excellence.","ja":"組織がどれだけうまく機能しているかを判断するために重要な特定の指標。オペレーショナルエクセレンスを推進するために不可欠です。"},"url":"https://asq.org/quality-resources/articles/asq-global-state-of-quality-research-2-kpis-key-to-successful-supply-chain?id=cf113e03de2c492998365b5b2a999095","alLinks":[]},
+        {"id":41,"symbol":"BEA","name":{"en":"Break-even Analysis","ja":"損益分岐点分析"},"category":{"en":"Six Sigma Tools, Decision-Making, Data Analysis","ja":"シックスシグマツール, 意思決定, データ分析"},"dmaicPhase":{"en":"Analyze, Improve","ja":"分析, 改善"},"purpose":{"en":"Determines the point where revenue equals cost","ja":"収益がコストと等しくなる点を決定する"},"relatedTools":{"en":["Cost of Quality","ROI"],"ja":["品質コスト","ROI"]},"description":{"en":"A financial calculation that determines the point at which total costs equal total revenue, revealing when an endeavor becomes profitable.","ja":"総コストが総収益と等しくなる点を決定する財務計算で、事業がいつ利益を生むようになるかを明らかにします。"},"url":"https://www.netsuite.com/portal/resource/articles/financial-management/break-even-analysis.shtml","alLinks":[]},
+        {"id":42,"symbol":"RBD","name":{"en":"Robust Design","ja":"ロバスト設計"},"category":{"en":"Six Sigma Tools, Advanced Quality Tool","ja":"シックスシグマツール, 高度な品質ツール"},"dmaicPhase":{"en":"Improve, Design (DMADV)","ja":"改善, 設計 (DMADV)"},"purpose":{"en":"Ensures consistent performance by minimizing sensitivity to variation","ja":"ばらつきへの感度を最小限に抑え、一貫した性能を保証する"},"relatedTools":{"en":["DOE","Taguchi Methods"],"ja":["実験計画法 (DOE)","タグチメソッド"]},"description":{"en":"A set of concepts and practices which directly affect the ability of the product or process to withstand the influence of variation and continue to provide high quality performance.","ja":"製品やプロセスがばらつきの影響に耐え、高品質な性能を提供し続ける能力に直接影響を与える一連の概念と実践。"},"url":"https://asq.org/quality-resources/articles/10-keys-to-achieving-robust-product-process-designs?id=8def5d6d4f624afd83ce4062fbb10a94","alLinks":[]},
+        {"id":43,"symbol":"VOC","name":{"en":"Voice of Customer","ja":"顧客の声 (VOC)"},"category":{"en":"C-IMP Tool, Six Sigma Tools","ja":"C-IMPツール, シックスシグマツール"},"dmaicPhase":{"en":"Define","ja":"定義"},"purpose":{"en":"To gather and understand customer needs, expectations, and feedback","ja":"顧客のニーズ、期待、フィードバックを収集し理解するため"},"relatedTools":{"en":["Surveys","Interviews","Focus Groups","Kano Model"],"ja":["アンケート","インタビュー","フォーカスグループ","狩野モデル"]},"description":{"en":"A systematic process for capturing customer feedback through methods like surveys, interviews, and competitor analysis (stated, unstated, current, and future) into an organization's products, services, and processes.","ja":"アンケート、インタビュー、競合分析などの手法を用いて顧客のフィードバック（表明された、されていない、現在および将来の）を収集し、組織の製品、サービス、プロセスに反映させる体系的なプロセス。"},"url":"https://asq.org/quality-resources/voice-of-the-customer","alLinks":[]},
+        {"id":44,"symbol":"SCP","name":{"en":"Scope","ja":"スコープ"},"category":{"en":"C-IMP Tool, Project Management","ja":"C-IMPツール, プロジェクトマネジメント"},"dmaicPhase":{"en":"Define","ja":"定義"},"purpose":{"en":"To clearly define and agree upon the boundaries of a project or problem.","ja":"プロジェクトや問題の境界を明確に定義し、合意するため"},"relatedTools":{"en":["Project Charter","SMART Goals","Problem Statement"],"ja":["プロジェクト憲章","SMART目標","問題記述書"]},"description":{"en":"Bounding the problem or project scope is vital for clarity, prioritization, and alignment with stakeholders. It ensures that objectives are clear and agreed upon...","ja":"問題やプロジェクトのスコープを区切ることは、明確化、優先順位付け、および関係者との整合性のために不可欠です。これにより、目的が明確で合意されていることが保証されます..."},"url":"https://www.pmi.org/learning/library/defining-managing-project-scope-7775","alLinks":[]},
+        {"id":45,"symbol":"PRTO","name":{"en":"Pareto Chart","ja":"パレート図"},"category":{"en":"C-IMP Tool, Basic Quality Tool, Problem Identification, Decision-Making","ja":"C-IMPツール, 基本的な品質ツール, 問題特定, 意思決定"},"dmaicPhase":{"en":"Analyze, Define","ja":"分析, 定義"},"purpose":{"en":"To identify and prioritize the most significant causes of a problem.","ja":"問題の最も重要な原因を特定し、優先順位付けするため"},"relatedTools":{"en":["5 Whys","Fishbone Diagram","Check Sheet"],"ja":["なぜなぜ5回","特性要因図","チェックシート"]},"description":{"en":"A combined bar and line graph where individual values are represented by bars in descending order... It visualizes the 80/20 rule... The lengths of the bars represent frequency or cost (time or money), and are arranged with longest bars on the left and the shortest to the right.","ja":"棒グラフと折れ線グラフを組み合わせたもので、個々の値が降順に棒で表されます... 80/20の法則を視覚化します... 棒の長さは頻度またはコスト（時間または金額）を表し、最も長い棒が左に、最も短い棒が右に配置されます。"},"url":"https://asq.org/quality-resources/pareto","alLinks":[]},
+        {"id":46,"symbol":"5W2H","name":{"en":"5W2H","ja":"5W2H"},"category":{"en":"C-IMP Tool, Problem Identification","ja":"C-IMPツール, 問題特定"},"dmaicPhase":{"en":"Define, Analyze","ja":"定義, 分析"},"purpose":{"en":"To explore the details of a problem in a structured way to create a clear understanding.","ja":"明確な理解を形成するために、問題の詳細を構造的に探求するため"},"relatedTools":{"en":["Problem Statement","Root Cause Analysis"],"ja":["問題記述書","根本原因分析"]},"description":{"en":"An analytical technique that uses seven specific questions (What, Why, Who, Where, When, How, How much) to detail problem symptoms and form the basis for a clear Problem Statement.","ja":"7つの特定の質問（What, Why, Who, Where, When, How, How much）を使用して問題の症状を詳述し、明確な問題記述の基礎を形成する分析手法。"},"url":"https://www.visual-management.com/what-is-5w2h.html","alLinks":[]},
+        {"id":47,"symbol":"SG","name":{"en":"SMART Goals","ja":"SMART目標"},"category":{"en":"C-IMP Tool, Project Management","ja":"C-IMPツール, プロジェクトマネジメント"},"dmaicPhase":{"en":"Define","ja":"定義"},"purpose":{"en":"To establish clear, actionable, and trackable objectives for a project.","ja":"プロジェクトのために明確で、実行可能で、追跡可能な目標を設定するため"},"relatedTools":{"en":["Project Charter","Project Management Plan"],"ja":["プロジェクト憲章","プロジェクトマネジメント計画"]},"description":{"en":"A goal-setting framework requiring objectives to be Specific, Measurable, Achievable, Relevant, and Time-bound. This ensures that project success can be clearly measured...","ja":"目標設定のフレームワークで、目標が具体的（Specific）、測定可能（Measurable）、達成可能（Achievable）、関連性がある（Relevant）、期限が定められている（Time-bound）ことを要求します。これにより、プロジェクトの成功が明確に測定できるようになります..."},"url":"https://www.pmi.org/learning/library/smart-goals-pmp-certification-6565","alLinks":[]},
+        {"id":48,"symbol":"PC","name":{"en":"Project Charter","ja":"プロジェクト憲章"},"category":{"en":"C-IMP Tool, Six Sigma Tools, Project Management","ja":"C-IMPツール, シックスシグマツール, プロジェクトマネジメント"},"dmaicPhase":{"en":"Define","ja":"定義"},"purpose":{"en":"To formally authorize a project and outline its objectives, scope, and participants.","ja":"プロジェクトを正式に承認し、その目的、範囲、参加者を概説するため"},"relatedTools":{"en":["Scope Statement","Stakeholder Analysis","RACI Chart"],"ja":["スコープ記述書","ステークホルダー分析","RACIチャート"]},"description":{"en":"A foundational document that defines the project's scope and objectives. It identifies stakeholders, delineates roles and responsibilities...","ja":"プロジェクトの範囲と目的を定義する基本文書。関係者を特定し、役割と責任を明確にします..."},"url":"https://asq.org/quality-resources/dmaic","alLinks":[]},
+        {"id":49,"symbol":"PM","name":{"en":"Process Map (VSM-Light)","ja":"プロセスマップ (VSM-Light)"},"category":{"en":"C-IMP Tool, Basic Quality Tool, Six Sigma Tools, Lean Management, Process Management","ja":"C-IMPツール, 基本的な品質ツール, シックスシグマツール, リーンマネジメント, プロセスマネジメント"},"dmaicPhase":{"en":"Define, Measure, Analyze, Improve","ja":"定義, 測定, 分析, 改善"},"purpose":{"en":"To visualize and understand the sequence of activities in a process...","ja":"プロセス内の一連の活動を視覚化し、理解するため..."},"relatedTools":{"en":["Value Stream Mapping (VSM)","Swimlane Diagram","Spaghetti Chart"],"ja":["バリューストリームマッピング (VSM)","スイムレーン図","スパゲッティチャート"]},"description":{"en":"A visual representation of the steps in a process. It is used to understand the flow of work, identify bottlenecks, and read the process based on data...","ja":"プロセス内のステップの視覚的表現。作業の流れを理解し、ボトルネックを特定し、データに基づいてプロセスを読み解くために使用されます..."},"url":"https://asq.org/quality-resources/process-analysis-tools","alLinks":[]},
+        {"id":50,"symbol":"8W","name":{"en":"8 Wastes","ja":"8つの無駄"},"category":{"en":"C-IMP Tool, Lean Management","ja":"C-IMPツール, リーンマネジメント"},"dmaicPhase":{"en":"Define, Analyze, Improve","ja":"定義, 分析, 改善"},"purpose":{"en":"To identify and eliminate non-value-adding activities from a process.","ja":"プロセスから付加価値のない活動を特定し、排除するため"},"relatedTools":{"en":["Value Stream Mapping (VSM)","5S","Kaizen"],"ja":["バリューストリームマッピング (VSM)","5S","カイゼン"]},"description":{"en":"A cornerstone of Lean methodology, focused on eliminating eight types of waste, remembered by the acronym DOWNTIME: Defects, Overproduction, Waiting, Non-utilized talent, Transportation, Inventory, Motion, Extra-processing.","ja":"リーン方法論の基礎であり、DOWNTIMEという頭字語で覚えられる8種類の無駄（欠陥、過剰生産、待機、未活用人材、輸送、在庫、動作、過剰処理）を排除することに焦点を当てています。"},"url":"https://asq.org/quality-resources/lean/eight-wastes","alLinks":[]},
+        {"id":51,"symbol":"SL","name":{"en":"Swimlane Diagram","ja":"スイムレーン図"},"category":{"en":"C-IMP Tool, Process Management, Basic Quality Tool","ja":"C-IMPツール, プロセスマネジメント, 基本的な品質ツール"},"dmaicPhase":{"en":"Define, Measure, Analyze, Improve","ja":"定義, 測定, 分析, 改善"},"purpose":{"en":"To map a process while clearly delineating task ownership and handoffs...","ja":"タスクの所有権と引き継ぎを明確にしながらプロセスをマッピングするため..."},"relatedTools":{"en":["Process Map","RACI Chart","Handover Chart"],"ja":["プロセスマップ","RACIチャート","ハンドオーバーチャート"]},"description":{"en":"A type of process flowchart that visually groups tasks into horizontal or vertical \"swimlanes\" representing different departments, roles, or individuals.","ja":"プロセスのフローチャートの一種で、タスクを水平または垂直の「スイムレーン」に視覚的にグループ化し、異なる部門、役割、または個人を表します。"},"url":"https://asq.org/quality-resources/flowchart","alLinks":[]},
+        {"id":52,"symbol":"HO","name":{"en":"Handover Chart","ja":"ハンドオーバーチャート"},"category":{"en":"C-IMP Tool, Process Management","ja":"C-IMPツール, プロセスマネジメント"},"dmaicPhase":{"en":"Analyze, Measure","ja":"分析, 測定"},"purpose":{"en":"To visualize and analyze the transfer of information or materials...","ja":"情報や材料の移動を視覚化し分析するため..."},"relatedTools":{"en":["RACI Chart","Swimlane Diagram","Process Map"],"ja":["RACIチャート","スイムレーン図","プロセスマップ"]},"description":{"en":"A chart that captures the movement and handoff of information or work, which is often a hidden or difficult-to-see part of a process.","ja":"プロセスの隠れた、または見えにくい部分である情報や作業の移動と引き継ぎを捉えるチャート。"},"url":"https://www.smartsheet.com/content/handoff-process","alLinks":[]},
+        {"id":53,"symbol":"SC","name":{"en":"Spaghetti Chart","ja":"スパゲッティチャート"},"category":{"en":"C-IMP Tool, Lean Management, Process Management","ja":"C-IMPツール, リーンマネジメント, プロセスマネジメント"},"dmaicPhase":{"en":"Measure, Analyze","ja":"測定, 分析"},"purpose":{"en":"To visualize and quantify the physical movement of people, materials, or information...","ja":"人、材料、または情報の物理的な移動を視覚化し、定量化するため..."},"relatedTools":{"en":["Process Map","5S","Gemba Walk"],"ja":["プロセスマップ","5S","現場ウォーク"]},"description":{"en":"A visual tool that uses a continuous line to trace the path of an item or person through a process. It provides a bird's-eye view of workflow...","ja":"連続した線を使用して、プロセスを通るアイテムや人の経路を追跡する視覚的なツール。ワークフローの鳥瞰図を提供します..."},"url":"https://asq.org/quality-resources/spaghetti-diagram","alLinks":[]},
+        {"id":54,"symbol":"BS","name":{"en":"Basic Statistics","ja":"基本統計量"},"category":{"en":"C-IMP Tool, Data Analysis","ja":"C-IMPツール, データ分析"},"dmaicPhase":{"en":"Measure, Analyze","ja":"測定, 分析"},"purpose":{"en":"To summarize, describe, and understand the key characteristics of a dataset.","ja":"データセットの主要な特性を要約し、記述し、理解するため"},"relatedTools":{"en":["Histogram","Control Chart","Pareto Chart"],"ja":["ヒストグラム","管理図","パレート図"]},"description":{"en":"The practice of using fundamental quantitative measures to describe a dataset. Common measures include mean (average), median (middle value), mode (most frequent value)...","ja":"データセットを記述するために基本的な定量的尺度を使用する実践。一般的な尺度には、平均、中央値、最頻値などがあります..."},"url":"https://asq.org/quality-resources/basic-statistics","alLinks":[]},
+        {"id":55,"symbol":"SF","name":{"en":"Summary of Findings","ja":"所見の要約"},"category":{"en":"C-IMP Tool, Project Management","ja":"C-IMPツール, プロジェクトマネジメント"},"dmaicPhase":{"en":"Analyze, Improve, Control","ja":"分析, 改善, 管理"},"purpose":{"en":"To provide a concise overview of process analysis e.g. summary of findings from VSM.","ja":"プロセス分析の簡潔な概要（例：VSMからの所見の要約）を提供するため"},"relatedTools":{"en":["Process Map","Data Analysis","Project Report"],"ja":["プロセスマップ","データ分析","プロジェクト報告書"]},"description":{"en":"A report that summarizes the data captured during process analysis. It typically refers the key metrics such as the number and percentage of Value Adding (VA) and Non Value Adding (NVA) steps, time spent in each category, the number of handovers and employees involved, identified problems, and total Work in Progress, aiming to provide a data-driven snapshot of the process being examined.","ja":"プロセス分析中に収集されたデータを要約するレポート。通常、付加価値（VA）および非付加価値（NVA）ステップの数と割合、各カテゴリに費やされた時間、引き継ぎの数と関与した従業員、特定された問題、および総仕掛品などの主要な指標を参照し、調査対象のプロセスのデータ駆動型のスナップショットを提供することを目指します。"},"url":"https://asq.org/quality-resources/quality-glossary","alLinks":[]},
+        {"id":56,"symbol":"BrS","name":{"en":"Brainstorming","ja":"ブレーンストーミング"},"category":{"en":"C-IMP Tool, Problem Identification, Advanced Quality Tool","ja":"C-IMPツール, 問題特定, 高度な品質ツール"},"dmaicPhase":{"en":"Define, Analyze, Improve","ja":"定義, 分析, 改善"},"purpose":{"en":"To generate a large number of creative ideas or potential causes...","ja":"多数の創造的なアイデアや潜在的な原因を生成するため..."},"relatedTools":{"en":["Affinity Diagram","Fishbone Diagram","Mind Mapping"],"ja":["親和図","特性要因図","マインドマッピング"]},"description":{"en":"A team-based activity designed to ensure the thorough evaluation of a problem by identifying as many factors or potential solutions as possible...","ja":"できるだけ多くの要因や潜在的な解決策を特定することによって、問題の徹底的な評価を確実にするために設計されたチームベースの活動..."},"url":"https://asq.org/quality-resources/brainstorming","alLinks":[]},
+        {"id":57,"symbol":"RCA","name":{"en":"Root Cause Analysis","ja":"根本原因分析 (RCA)"},"category":{"en":"C-IMP Tool, Six Sigma Tools, Problem Identification","ja":"C-IMPツール, シックスシグマツール, 問題特定"},"dmaicPhase":{"en":"Analyze","ja":"分析"},"purpose":{"en":"To systematically investigate and identify the fundamental cause of a problem...","ja":"問題の根本原因を体系的に調査し、特定するため..."},"relatedTools":{"en":["5 Whys","Fishbone Diagram","Pareto Analysis"],"ja":["なぜなぜ5回","特性要因図","パレート分析"]},"description":{"en":"A problem-solving method that uses wide range of approaches, tools, and techniques used to uncover causes of problems.. The specific tool selection often depends on the complexity of the problem.","ja":"問題の原因を明らかにするために使用される幅広いアプローチ、ツール、およびテクニックを使用する問題解決手法。具体的なツールの選択は、しばしば問題の複雑さに依存します。"},"url":"https://asq.org/quality-resources/root-cause-analysis","alLinks":[]},
+        {"id":58,"symbol":"FBD","name":{"en":"Fishbone Diagram","ja":"特性要因図"},"category":{"en":"C-IMP Tool, Basic Quality Tool, Problem Identification","ja":"C-IMPツール, 基本的な品質ツール, 問題特定"},"dmaicPhase":{"en":"Analyze, Define","ja":"分析, 定義"},"purpose":{"en":"To visually brainstorm and categorize the potential causes of a specific problem...","ja":"特定の問題の潜在的な原因を視覚的にブレインストーミングし、分類するため..."},"relatedTools":{"en":["5 Whys","Brainstorming","Pareto Analysis"],"ja":["なぜなぜ5回","ブレーンストーミング","パレート分析"]},"description":{"en":"A Lean tool used to document and visualize possible causes for a single effect. It often complements the 6M methodology to help teams identify, explore, and display all possible causes related to a problem or effect.... Also known as an Ishikawa or Cause and Effect Diagram.","ja":"単一の効果に対する考えられる原因を文書化し、視覚化するために使用されるリーンツール。多くの場合、6M手法を補完して、チームが問題や効果に関連するすべての考えられる原因を特定、探求、表示するのに役立ちます... 石川ダイアグラムまたは特性要因図としても知られています。"},"url":"https://asq.org/quality-resources/fishbone","alLinks":[]},
+        {"id":59,"symbol":"5W","name":{"en":"5 Whys","ja":"なぜなぜ5回"},"category":{"en":"C-IMP Tool, Problem Identification","ja":"C-IMPツール, 問題特定"},"dmaicPhase":{"en":"Analyze","ja":"分析"},"purpose":{"en":"To explore the cause-and-effect relationships of a problem to determine its root cause.","ja":"問題の因果関係を探求し、その根本原因を特定するため"},"relatedTools":{"en":["Root Cause Analysis","Fishbone Diagram","Problem Statement"],"ja":["根本原因分析 (RCA)","特性要因図","問題記述書"]},"description":{"en":"An iterative interrogative technique used to determine the root cause of a defect or problem by repeating the question \"Why?\" at least five times.","ja":"「なぜ？」という質問を少なくとも5回繰り返すことによって、欠陥や問題の根本原因を特定するために使用される反復的な質問技法。"},"url":"https://asq.org/quality-resources/five-whys","alLinks":[]},
+        {"id":60,"symbol":"PkC","name":{"en":"Pick Chart","ja":"ピックチャート"},"category":{"en":"C-IMP Tool, Decision-Making","ja":"C-IMPツール, 意思決定"},"dmaicPhase":{"en":"Improve, Analyze","ja":"改善, 分析"},"purpose":{"en":"To organize and prioritize potential solutions or ideas...","ja":"潜在的な解決策やアイデアを整理し、優先順位付けするため..."},"relatedTools":{"en":["Brainstorming","Decision Matrix","Impact Effort Matrix"],"ja":["ブレーンストーミング","決定マトリックス","インパクト努力マトリックス"]},"description":{"en":"A visual tool used after brainstorming to categorize ideas into four quadrants: Possible, Implement, Challenge, and Kill. It helps teams choose which ideas to pursue.","ja":"ブレインストーミングの後にアイデアを「可能（Possible）」「実行（Implement）」「挑戦（Challenge）」「却下（Kill）」の4つの象限に分類するために使用される視覚的なツール。チームがどのアイデアを追求するかを選択するのに役立ちます。"},"url":"https://www.jabil.com/blog/pick-chart-lean-six-sigma-tool.html","alLinks":[]},
+        {"id":61,"symbol":"ErP","name":{"en":"Error Proofing (Poka-Yoke)","ja":"エラープルーフ (ポカヨケ)"},"category":{"en":"C-IMP Tool, Lean Management, Quality Systems","ja":"C-IMPツール, リーンマネジメント, 品質システム"},"dmaicPhase":{"en":"Improve, Control","ja":"改善, 管理"},"purpose":{"en":"To prevent errors from occurring in a process or to make them immediately obvious...","ja":"プロセスでエラーが発生するのを防ぐ、またはエラーを即座に明白にするため..."},"relatedTools":{"en":["FMEA","Standard Work","Control Plan"],"ja":["FMEA","標準作業","コントロールプラン"]},"description":{"en":"The use of any automatic device or method that either makes it impossible for an error to occur or makes the error immediately obvious... Also known as Poka-Yoke...","ja":"エラーの発生を不可能にするか、エラーを即座に明白にする自動装置や手法の使用... ポカヨケとしても知られています..."},"url":"https://asq.org/quality-resources/mistake-proofing","alLinks":[]},
+        {"id":62,"symbol":"ImP","name":{"en":"Implementation Plan","ja":"実行計画"},"category":{"en":"C-IMP Tool, Project Management","ja":"C-IMPツール, プロジェクトマネジメント"},"dmaicPhase":{"en":"Improve, Control","ja":"改善, 管理"},"purpose":{"en":"To structure and manage the execution of solutions and improvement projects.","ja":"解決策と改善プロジェクトの実行を構造化し、管理するため"},"relatedTools":{"en":["Project Plan","Gantt Chart","RACI Chart"],"ja":["プロジェクト計画","ガントチャート","RACIチャート"]},"description":{"en":"A detailed plan that outlines the tasks, resources, timelines, and responsibilities required to implement a solution. It helps divide work, set priorities, and track progress.","ja":"解決策を実施するために必要なタスク、リソース、タイムライン、および責任を概説する詳細な計画。作業を分割し、優先順位を設定し、進捗を追跡するのに役立ちます。"},"url":"https://asana.com/resources/implementation-plan","alLinks":[]},
+        {"id":63,"symbol":"STD","name":{"en":"Standardization","ja":"標準化"},"category":{"en":"C-IMP Tool, Lean Management, Quality Systems","ja":"C-IMPツール, リーンマネジメント, 品質システム"},"dmaicPhase":{"en":"Control, Improve","ja":"管理, 改善"},"purpose":{"en":"To establish a consistent and agreed-upon best practice...","ja":"一貫性のある合意されたベストプラクティスを確立するため..."},"relatedTools":{"en":["Standard Work","Control Plan","5S"],"ja":["標準作業","コントロールプラン","5S"]},"description":{"en":"The process of developing and implementing technical standards to ensure uniformity, efficiency, and quality. Standardized work provides a baseline for continuous improvement.","ja":"均一性、効率性、および品質を保証するための技術基準を開発し、実施するプロセス。標準化された作業は、継続的改善のベースラインを提供します。"},"url":"https://asq.org/quality-resources/standardization","alLinks":[]},
+        {"id":64,"symbol":"RACI","name":{"en":"RACI Chart","ja":"RACIチャート"},"category":{"en":"C-IMP Tool, Project Management","ja":"C-IMPツール, プロジェクトマネジメント"},"dmaicPhase":{"en":"Define, Improve, Control","ja":"定義, 改善, 管理"},"purpose":{"en":"To clarify and define roles and responsibilities for tasks and deliverables...","ja":"タスクと成果物に対する役割と責任を明確にし、定義するため..."},"relatedTools":{"en":["Project Charter","Swimlane Diagram","Stakeholder Analysis"],"ja":["プロジェクト憲章","スイムレーン図","ステークホルダー分析"]},"description":{"en":"A matrix showing project activities listed in the first column and stakeholders listed as column headers. Each cell is assigned a role: Responsible, Accountable, Consulted, Informed.","ja":"最初の列にプロジェクト活動をリストし、列ヘッダーとして関係者をリストしたマトリックス。各セルには、実行責任者（Responsible）、説明責任者（Accountable）、協業先（Consulted）、報告先（Informed）の役割が割り当てられます。"},"url":"https://www.pmi.org/learning/library/rasci-chart-project-management-accountability-6927","alLinks":[]},
+        {"id":65,"symbol":"Ctrl","name":{"en":"Control Plan","ja":"コントロールプラン"},"category":{"en":"C-IMP Tool, Six Sigma Tools, Quality Systems","ja":"C-IMPツール, シックスシグマツール, 品質システム"},"dmaicPhase":{"en":"Control","ja":"管理"},"purpose":{"en":"To ensure that a process consistently operates within its desired state...","ja":"プロセスが望ましい状態で一貫して動作することを保証するため..."},"relatedTools":{"en":["Control Chart","Standard Work","FMEA"],"ja":["管理図","標準作業","FMEA"]},"description":{"en":"A living document that describes the controls (measurements, specifications, actions) needed to ensure process outputs meet requirements.","ja":"プロセスのアウトプットが要件を満たすことを保証するために必要な管理（測定、仕様、アクション）を記述した生きた文書。"},"url":"https://asq.org/quality-resources/quality-plans","alLinks":[]},
+        {"id":66,"symbol":"ComP","name":{"en":"Communication Plan","ja":"コミュニケーション計画"},"category":{"en":"C-IMP Tool, Project Management","ja":"C-IMPツール, プロジェクトマネジメント"},"dmaicPhase":{"en":"All DMAIC Phases","ja":"全DMAICフェーズ"},"purpose":{"en":"To ensure timely and appropriate communication with all project stakeholders.","ja":"すべてのプロジェクト関係者とのタイムリーで適切なコミュニケーションを確保するため"},"relatedTools":{"en":["Stakeholder Analysis","RACI Chart","Project Plan"],"ja":["ステークホルダー分析","RACIチャート","プロジェクト計画"]},"description":{"en":"A tool for effectively managing and sharing information with stakeholders during a project or workshop. It outlines what needs to be communicated, to whom, when, and how.","ja":"プロジェクトやワークショップ中に情報を効果的に管理し、関係者と共有するためのツール。何を、誰に、いつ、どのように伝えるかを概説します。"},"url":"https://www.pmi.org/learning/library/creating-a-communication-plan-6447","alLinks":[]},
+        {"id":67,"symbol":"VCP","name":{"en":"Validations / Check Point","ja":"検証/チェックポイント"},"category":{"en":"C-IMP Tool, Project Management","ja":"C-IMPツール, プロジェクトマネジメント"},"dmaicPhase":{"en":"All DMAIC Phases (as gates)","ja":"全DMAICフェーズ (ゲートとして)"},"purpose":{"en":"To obtain feedback, approval, or buy-in at critical stages...","ja":"重要な段階でフィードバック、承認、または同意を得るため..."},"relatedTools":{"en":["Project Plan","Stage-Gate Process","Tollgate Review"],"ja":["プロジェクト計画","ステージゲート法","トールゲートレビュー"]},"description":{"en":"Pre-defined moments within a project or process where the team seeks feedback and approval from managers or stakeholders. These checkpoints ensure alignment...","ja":"プロジェクトやプロセス内で事前に定義された瞬間で、チームがマネージャーや関係者からフィードバックと承認を求めます。これらのチェックポイントは、整合性を保証します..."},"url":"https://www.pmi.org/learning/library/project-tollgate-reviews-governance-8047","alLinks":[]},
+        {"id":68,"symbol":"KB","name":{"en":"Kanban","ja":"かんばん"},"category":{"en":"Lean Management","ja":"リーンマネジメント"},"dmaicPhase":{"en":"Control, Improve","ja":"管理, 改善"},"purpose":{"en":"Visual system for managing work","ja":"作業を管理するための視覚的なシステム"},"relatedTools":{"en":["Visual Management","Heijunka"],"ja":["目で見る管理","平準化"]},"description":{"en":"A method for providing material/product to a succeeding operation by signaling the preceding operation when more material/product is needed (pull system). Often uses cards...","ja":"後工程が必要な時に前工程に信号を送ることで、材料や製品を供給する方法（プルシステム）。しばしばカードが使われます..."},"url":"https://asq.org/quality-press/display-item?item=H1514 (related to Kaizen Kanban)","alLinks":[]},
+        {"id":69,"symbol":"PY","name":{"en":"Poka-Yoke","ja":"ポカヨケ"},"category":{"en":"Lean Management, Quality Systems","ja":"リーンマネジメント, 品質システム"},"dmaicPhase":{"en":"Improve, Control","ja":"改善, 管理"},"purpose":{"en":"Prevents defects","ja":"欠陥を防ぐ"},"relatedTools":{"en":["FMEA","Error-proofing"],"ja":["FMEA","エラープルーフ"]},"description":{"en":"Mistake-proofing devices or methods that work by warning, controlling, or shutting down operations to prevent defects rather than relying on inspection. Formalized by Shigeo Shingo.","ja":"検査に頼るのではなく、警告、制御、または操作を停止することで欠陥を防ぐポカヨケ装置や手法。新郷重夫によって形式化されました。"},"url":"https://asq.org/quality-resources/articles/apply-poka-yoke-devices-now-to-eliminate-defects?id=0851b153f1204796b838365ab4480c9f","alLinks":[]},
+        {"id":70,"symbol":"KZ","name":{"en":"Kaizen","ja":"カイゼン"},"category":{"en":"Lean Management, Quality Systems","ja":"リーンマネジメント, 品質システム"},"dmaicPhase":{"en":"Improve, Control (Continuous)","ja":"改善, 管理 (継続的)"},"purpose":{"en":"Continuous improvement philosophy","ja":"継続的改善の哲学"},"relatedTools":{"en":["PDCA Cycle","Gemba Walk"],"ja":["PDCAサイクル","現場ウォーク"]},"description":{"en":"A Japanese term typically translated to \"continuous improvement,\" referring to subtle, gradual improvements made over time by doing little things better.","ja":"日本語で「継続的改善」と訳されることが多く、小さなことをより良くすることで時間をかけて行われる、微妙で段階的な改善を指します。"},"url":"https://asq.org/quality-progress/articles/lean-lessons-the-benefits-of-kaizen-and-kaizen-events?id=eba923ad72c04eda9c579ffe2d543ffb","alLinks":[]},
+        {"id":71,"symbol":"GW","name":{"en":"Gemba Walk","ja":"現場ウォーク"},"category":{"en":"Lean Management","ja":"リーンマネジメント"},"dmaicPhase":{"en":"Measure, Analyze, Improve","ja":"測定, 分析, 改善"},"purpose":{"en":"Direct observation of work","ja":"作業の直接観察"},"relatedTools":{"en":["Kaizen","Visual Management"],"ja":["カイゼン","目で見る管理"]},"description":{"en":"A process walk, observing a process as it is done, in the place where it's done, to find areas for improvement.","ja":"改善の余地を見つけるために、プロセスが行われている場所で、プロセスを観察する「プロセスウォーク」。"},"url":"https://asq.org/quality-resources/articles/talk-the-walk?id=0d058af9e48f466bb613234330cf0861","alLinks":[]},
+        {"id":72,"symbol":"HJ","name":{"en":"Heijunka","ja":"平準化"},"category":{"en":"Lean Management","ja":"リーンマネジメント"},"dmaicPhase":{"en":"Control, Improve","ja":"管理, 改善"},"purpose":{"en":"Balances production volume and variety","ja":"生産量と品種のバランスを取る"},"relatedTools":{"en":["Kanban","Production Scheduling"],"ja":["かんばん","生産計画"]},"description":{"en":"A method of leveling production, usually at the final assembly line, that makes just-in-time production possible. It involves averaging the volume and sequence...","ja":"ジャストインタイム生産を可能にする、通常は最終組立ラインでの生産平準化の手法。量と順序を平均化することを含みます..."},"url":"https://asq.org/quality-resources/quality-glossary/h (see entry for Heijunka)","alLinks":[]},
+        {"id":73,"symbol":"SW","name":{"en":"Standardized Work","ja":"標準作業"},"category":{"en":"Lean Management, Quality Systems","ja":"リーンマネジメント, 品質システム"},"dmaicPhase":{"en":"Improve, Control","ja":"改善, 管理"},"purpose":{"en":"Documented procedures for consistency","ja":"一貫性のための文書化された手順"},"relatedTools":{"en":["5S","Work Instructions"],"ja":["5S","作業指示書"]},"description":{"en":"Instructions designed to ensure processes are carried out accurately and consistently.","ja":"プロセスが正確かつ一貫して実行されることを保証するために設計された指示。"},"url":"https://my.asq.org/communities/events/item/298/60/3979","alLinks":[]},
+        {"id":74,"symbol":"TT","name":{"en":"Takt Time","ja":"タクトタイム"},"category":{"en":"Lean Management","ja":"リーンマネジメント"},"dmaicPhase":{"en":"Define, Measure, Control","ja":"定義, 測定, 管理"},"purpose":{"en":"Rate of production needed to meet customer demand","ja":"顧客の需要を満たすために必要な生産率"},"relatedTools":{"en":["Heijunka","Just-In-Time"],"ja":["平準化","ジャストインタイム"]},"description":{"en":"The rate of customer demand, calculated by dividing production time by the quantity of product the customer requires in that time. The heartbeat of a lean manufacturing system.","ja":"顧客の需要の速さ。生産時間を顧客がその時間に必要とする製品の量で割って計算されます。リーン生産システムの心臓部です。"},"url":"https://asq.org/quality-resources/quality-glossary/t (see entry for Takt time)","alLinks":[]},
+        {"id":75,"symbol":"SMED","name":{"en":"Single Minute Exchange of Die","ja":"SMED"},"category":{"en":"Lean Management","ja":"リーンマネジメント"},"dmaicPhase":{"en":"Improve","ja":"改善"},"purpose":{"en":"Reduces setup time","ja":"段取り時間を短縮する"},"relatedTools":{"en":["Standardized Work","Kaizen"],"ja":["標準作業","カイゼン"]},"description":{"en":"A method to reduce changeover downtime by streamlining processes like organizing tools and equipment.","ja":"工具や設備の整理などのプロセスを合理化することで、段取り替えのダウンタイムを削減する方法。"},"url":"https://asq.org/quality-resources/articles/case-studies/complementary-alliance?id=d420c0f34f0a430a9e92733b78a5d937","alLinks":[]},
+        {"id":76,"symbol":"TPM","name":{"en":"Total Productive Maintenance","ja":"TPM"},"category":{"en":"Lean Management, Quality Systems","ja":"リーンマネジメント, 品質システム"},"dmaicPhase":{"en":"Improve, Control","ja":"改善, 管理"},"purpose":{"en":"Proactive equipment maintenance","ja":"予防的な設備保全"},"relatedTools":{"en":["5S","Kaizen"],"ja":["5S","カイゼン"]},"description":{"en":"A team and shop floor based initiative focused on optimizing the effectiveness of manufacturing equipment. Helps workers efficiently care for equipment.","ja":"製造設備の効率を最適化することに焦点を当てた、チームと現場ベースの取り組み。作業者が効率的に設備の面倒を見るのに役立ちます。"},"url":"https://asq.org/training/total-productive-maintenance-tpmtqg","alLinks":[]},
+        {"id":77,"symbol":"JIT","name":{"en":"Just-In-Time","ja":"ジャストインタイム (JIT)"},"category":{"en":"Lean Management","ja":"リーンマネジメント"},"dmaicPhase":{"en":"Control, Improve","ja":"管理, 改善"},"purpose":{"en":"Minimizes inventory by producing only what's needed","ja":"必要なものだけを生産することで在庫を最小限に抑える"},"relatedTools":{"en":["Kanban","Heijunka"],"ja":["かんばん","平準化"]},"description":{"en":"An optimal material requirement planning system for a manufacturing process in which there is little or no manufacturing material inventory on hand.","ja":"製造プロセスにおいて、手元に製造材料の在庫がほとんどまたは全くない状態での最適な材料要求計画システム。"},"url":"https://asq.org/quality-resources/quality-glossary/j (see entry for Just-in-time (JIT) manufacturing)","alLinks":[]},
+        {"id":78,"symbol":"ADN","name":{"en":"Andon","ja":"アンドン"},"category":{"en":"Lean Management","ja":"リーンマネジメント"},"dmaicPhase":{"en":"Control, Improve","ja":"管理, 改善"},"purpose":{"en":"Visual signaling system to alert process issues in real time","ja":"リアルタイムでプロセスの問題を警告するための視覚的な信号システム"},"relatedTools":{"en":["Jidoka","Visual Factory"],"ja":["自働化","目で見る工場"]},"description":{"en":"A production area visual control device, such as a lighted overhead display. It communicates the status of the production system and alerts team members to emerging problems.","ja":"生産エリアの視覚的な管理装置で、点灯する頭上ディスプレイなどがあります。生産システムの状況を伝え、チームメンバーに発生中の問題を警告します。"},"url":"https://asq.org/quality-resources/quality-glossary (see entry for Andon board)","alLinks":[]},
+        {"id":79,"symbol":"JDK","name":{"en":"Jidoka","ja":"自働化"},"category":{"en":"Lean Management","ja":"リーンマネジメント"},"dmaicPhase":{"en":"Control, Improve","ja":"管理, 改善"},"purpose":{"en":"Enables machines or operators to detect abnormalities and stop work automatically","ja":"機械や作業者が異常を検出し、自動的に作業を停止できるようにする"},"relatedTools":{"en":["Andon","Poka-Yoke"],"ja":["アンドン","ポカヨケ"]},"description":{"en":"Autonomation; a principle in Lean manufacturing where equipment is designed to stop automatically when a defect is detected.","ja":"自働化。リーン生産における原則で、欠陥が検出されたときに設備が自動的に停止するように設計されています。"},"url":"https://asq.org/specialized-credentials/lean (mentions Jidoka)","alLinks":[]},
+        {"id":80,"symbol":"KTA","name":{"en":"Kata","ja":"カタ"},"category":{"en":"Lean Management","ja":"リーンマネジメント"},"dmaicPhase":{"en":"Improve, Control (Continuous)","ja":"改善, 管理 (継続的)"},"purpose":{"en":"Promotes continuous improvement through structured routines","ja":"構造化されたルーチンを通じて継続的改善を促進する"},"relatedTools":{"en":["Kaizen","PDCA"],"ja":["カイゼン","PDCA"]},"description":{"en":"A pattern of thinking and acting that helps develop skills for improvement, adaptation, and innovation. Involves Improvement Kata and Coaching Kata.","ja":"改善、適応、革新のためのスキルを開発するのに役立つ思考と行動のパターン。「改善のカタ」と「コーチングのカタ」が含まれます。"},"url":"https://asq.org/quality-press/display-item?item=P1643","alLinks":[]},
+        {"id":81,"symbol":"OBY","name":{"en":"Obeya","ja":"大部屋"},"category":{"en":"Lean Management, Project Management","ja":"リーンマネジメント, プロジェクトマネジメント"},"dmaicPhase":{"en":"All DMAIC Phases","ja":"全DMAICフェーズ"},"purpose":{"en":"Collaborative visual workspace for cross-functional decision-making","ja":"部門横断的な意思決定のための協調的な視覚的ワークスペース"},"relatedTools":{"en":["Hoshin Kanri","Visual Factory"],"ja":["方針管理","目で見る工場"]},"description":{"en":"Japanese for \"big room,\" it's a visual management and collaboration method where cross-functional teams discuss progress, solve problems, and make data-driven decisions.","ja":"日本語で「大部屋」を意味し、部門横断チームが進捗を議論し、問題を解決し、データに基づいた意思決定を行う視覚的な管理と協調の手法です。"},"url":"https://leanscape.io/the-power-of-obeya-enhancing-collaboration-efficiency/","alLinks":[]},
+        {"id":82,"symbol":"TPS","name":{"en":"Toyota Production System","ja":"トヨタ生産方式 (TPS)"},"category":{"en":"Lean Management","ja":"リーンマネジメント"},"dmaicPhase":{"en":"N/A (System)","ja":"N/A (システム)"},"purpose":{"en":"Framework for Lean manufacturing and continuous improvement","ja":"リーン生産と継続的改善のフレームワーク"},"relatedTools":{"en":["JIT","Jidoka"],"ja":["ジャストインタイム (JIT)","自働化"]},"description":{"en":"The production system developed by Toyota that is the basis for many Lean principles, including 5S.","ja":"トヨタによって開発された生産システムで、5Sを含む多くのリーン原則の基礎となっています。"},"url":"https://asq.org/quality-resources/five-s-tutorial (mentions TPS as origin of 5S)","alLinks":[]},
+        {"id":83,"symbol":"NGS","name":{"en":"Nagara System","ja":"ながらシステム"},"category":{"en":"Lean Management","ja":"リーンマネジメント"},"dmaicPhase":{"en":"Improve, Control","ja":"改善, 管理"},"purpose":{"en":"Simultaneous processing to balance flow and efficiency","ja":"流れと効率のバランスを取るための同時処理"},"relatedTools":{"en":["Heijunka","Standard Work"],"ja":["平準化","標準作業"]},"description":{"en":"Smooth production flow, ideally one piece at a time, characterized by synchronization of production processes and maximum use of available time; includes overlapping of operations.","ja":"理想的には一個流しで、生産プロセスの同期と利用可能な時間の最大活用を特徴とするスムーズな生産フロー。作業の重複を含みます。"},"url":"https://asq.org/quality-resources/quality-glossary/n (see entry for Nagara system)","alLinks":[]},
+        {"id":84,"symbol":"NMH","name":{"en":"Nemawashi","ja":"根回し"},"category":{"en":"Lean Management, Project Management","ja":"リーンマネジメント, プロジェクトマネジメント"},"dmaicPhase":{"en":"Define, Improve","ja":"定義, 改善"},"purpose":{"en":"Pre-decision consensus-building process","ja":"意思決定前の合意形成プロセス"},"relatedTools":{"en":["Hoshin Kanri","Obeya"],"ja":["方針管理","大部屋"]},"description":{"en":"A Japanese term referring to the process of \"laying the groundwork\" for a project or decision by gathering support and consensus among stakeholders before formal discussions.","ja":"プロジェクトや決定の「根回し」をするプロセスを指す日本語。公式な議論の前に利害関係者の間で支持と合意を取り付けます。"},"url":"https://www.benchmarksixsigma.com/forum/topic/39835-nemawashi/","alLinks":[]},
+        {"id":85,"symbol":"OEE","name":{"en":"Overall Equipment Effectiveness","ja":"設備総合効率 (OEE)"},"category":{"en":"Lean Management, Data Analysis","ja":"リーンマネジメント, データ分析"},"dmaicPhase":{"en":"Measure, Control, Improve","ja":"測定, 管理, 改善"},"purpose":{"en":"Measures the effectiveness of equipment...","ja":"設備の有効性を測定する..."},"relatedTools":{"en":["TPM","Downtime Analysis"],"ja":["TPM","ダウンタイム分析"]},"description":{"en":"A metric used to determine how efficient a manufacturing organization is, based on availability, performance, and quality factors.","ja":"可用性、性能、品質の要因に基づいて、製造組織の効率を判断するために使用される指標。"},"url":"https://asq.org/quality-progress/articles/less-is-more?id=e2f57bdd91954c0895fc7d1b67675d03","alLinks":[]},
+        {"id":86,"symbol":"SHDB","name":{"en":"Shadow Board","ja":"シャドーボード"},"category":{"en":"Lean Management","ja":"リーンマネジメント"},"dmaicPhase":{"en":"Improve, Control","ja":"改善, 管理"},"purpose":{"en":"Organizes tools visually for quick access and accountability","ja":"迅速なアクセスと責任の所在を明確にするため、ツールを視覚的に整理する"},"relatedTools":{"en":["5S","Visual Factory"],"ja":["5S","目で見る工場"]},"description":{"en":"A visual management tool where outlines of tools are marked to ensure each tool has a dedicated place, promoting organization and quick identification of missing items.","ja":"各ツールに専用の場所があることを保証するためにツールの輪郭がマークされた視覚的管理ツールで、整理を促進し、紛失したアイテムを迅速に特定します。"},"url":"https://hsestore.co.uk/how-do-shadow-boards-contribute-to-5s-lean/","alLinks":[]},
+        {"id":87,"symbol":"VF","name":{"en":"Visual Factory","ja":"目で見る工場"},"category":{"en":"Lean Management","ja":"リーンマネジメント"},"dmaicPhase":{"en":"Improve, Control","ja":"改善, 管理"},"purpose":{"en":"Uses visual cues and controls to communicate information in real time","ja":"リアルタイムで情報を伝達するために視覚的な手がかりと制御を使用する"},"relatedTools":{"en":["Andon","Obeya"],"ja":["アンドン","大部屋"]},"description":{"en":"A workplace where visual information systems (like 5S, shadow boards, Andon) are used to allow quick determination of status and lay the foundation for a lean production system.","ja":"視覚情報システム（5S、シャドーボード、アンドンなど）を使用して、状況を迅速に判断し、リーン生産システムの基盤を築く職場。"},"url":"https://asq.org/quality-progress/articles/clean-house-with-lean-5s?id=0f8fb19cdac4461f8489a299342eaf82","alLinks":[]},
+        {"id":88,"symbol":"NGT","name":{"en":"Nominal Group Technique","ja":"名目集団法 (NGT)"},"category":{"en":"Problem Identification, Decision-Making, Advanced Quality Tool","ja":"問題特定, 意思決定, 高度な品質ツール"},"dmaicPhase":{"en":"Define, Analyze, Improve","ja":"定義, 分析, 改善"},"purpose":{"en":"Structured group decision-making","ja":"構造化されたグループでの意思決定"},"relatedTools":{"en":["Brainstorming","Delphi Method"],"ja":["ブレーンストーミング","デルファイ法"]},"description":{"en":"A structured method for group brainstorming that encourages contributions from everyone and facilitates quick agreement on the relative importance of issues, problems, or solutions.","ja":"全員からの貢献を促し、問題、課題、または解決策の相対的な重要性について迅速な合意を促進する、構造化されたグループブレインストーミング手法。"},"url":"https://asq.org/quality-resources/nominal-group-technique","alLinks":[]},
+        {"id":89,"symbol":"BR","name":{"en":"Brainstorming","ja":"ブレーンストーミング"},"category":{"en":"Problem Identification, Advanced Quality Tool","ja":"問題特定, 高度な品質ツール"},"dmaicPhase":{"en":"Define, Analyze, Improve","ja":"定義, 分析, 改善"},"purpose":{"en":"Generates ideas and solutions","ja":"アイデアと解決策を生み出す"},"relatedTools":{"en":["Affinity Diagram","Nominal Group Technique"],"ja":["親和図","名目集団法 (NGT)"]},"description":{"en":"An idea creation method for generating a large number of creative ideas in a short period of time.","ja":"短時間で多数の創造的なアイデアを生み出すためのアイデア創出手法。"},"url":"https://asq.org/quality-resources/brainstorming","alLinks":[]},
+        {"id":90,"symbol":"BM","name":{"en":"Benchmarking","ja":"ベンチマーキング"},"category":{"en":"Problem Identification, Data Analysis","ja":"問題特定, データ分析"},"dmaicPhase":{"en":"Define, Analyze, Measure","ja":"定義, 分析, 測定"},"purpose":{"en":"Compares performance against best practices","ja":"ベストプラクティスとパフォーマンスを比較する"},"relatedTools":{"en":["Gap Analysis","SWOT Analysis"],"ja":["ギャップ分析","SWOT分析"]},"description":{"en":"The process of measuring products, services, and processes against those of organizations known to be leaders in one or more aspects of their operations.","ja":"一つ以上の業務面でリーダーとして知られる組織の製品、サービス、プロセスと比較して測定するプロセス。"},"url":"https://asq.org/quality-resources/benchmarking","alLinks":[]},
+        {"id":91,"symbol":"SWOT","name":{"en":"SWOT Analysis","ja":"SWOT分析"},"category":{"en":"Problem Identification, Decision-Making","ja":"問題特定, 意思決定"},"dmaicPhase":{"en":"Define, Analyze","ja":"定義, 分析"},"purpose":{"en":"Evaluates Strengths, Weaknesses, Opportunities, Threats","ja":"強み、弱み、機会、脅威を評価する"},"relatedTools":{"en":["Benchmarking","Gap Analysis"],"ja":["ベンチマーキング","ギャップ分析"]},"description":{"en":"A strategic planning tool used to identify and analyze an organization's strengths, weaknesses, opportunities, and threats.","ja":"組織の強み、弱み、機会、脅威を特定し分析するために使用される戦略的計画ツール。"},"url":"https://asq.org/quality-progress/articles/the-right-tool-for-the-right-job?id=cd5a3839683445b2b4fe8e9cd7f9738d (mentions SWOT)","alLinks":[]},
+        {"id":92,"symbol":"GA","name":{"en":"Gap Analysis","ja":"ギャップ分析"},"category":{"en":"Problem Identification, Data Analysis","ja":"問題特定, データ分析"},"dmaicPhase":{"en":"Define, Analyze, Measure","ja":"定義, 分析, 測定"},"purpose":{"en":"Identifies differences between current and desired state","ja":"現状と望ましい状態との差を特定する"},"relatedTools":{"en":["Benchmarking","SWOT Analysis"],"ja":["ベンチマーキング","SWOT分析"]},"description":{"en":"The comparison of a current condition to the desired state, used to identify areas for improvement.","ja":"現状と望ましい状態との比較で、改善すべき領域を特定するために使用されます。"},"url":"https://asq.org/quality-resources/articles/gap-analysis-the-sows-ear?id=100a42d809a74624a5e84e7371e40d1b","alLinks":[]},
+        {"id":93,"symbol":"MM","name":{"en":"Mind Mapping","ja":"マインドマッピング"},"category":{"en":"Problem Identification, Advanced Quality Tool","ja":"問題特定, 高度な品質ツール"},"dmaicPhase":{"en":"Define, Analyze","ja":"定義, 分析"},"purpose":{"en":"Visual organization of ideas","ja":"アイデアの視覚的な整理"},"relatedTools":{"en":["Brainstorming","Affinity Diagram"],"ja":["ブレーンストーミング","親和図"]},"description":{"en":"A graphical technique for visualizing connections between several ideas or pieces of information. Mentioned as one of the seven team tools by ASQ.","ja":"複数のアイデアや情報のかけら間のつながりを視覚化するためのグラフィカルな技法。ASQによって7つのチームツールの1つとして言及されています。"},"url":"https://asq.org/quality-resources/webcasts/an-introduction-to-the-seven-team-tools-webcast?id=0b26668e8f0e49968a16930946986d2a (mentions MM)","alLinks":[]},
+        {"id":94,"symbol":"MVC","name":{"en":"Multi-Vari Chart","ja":"多変量管理図"},"category":{"en":"Data Analysis, Six Sigma Tools","ja":"データ分析, シックスシグマツール"},"dmaicPhase":{"en":"Analyze, Measure","ja":"分析, 測定"},"purpose":{"en":"Analyzes multiple sources of variation","ja":"複数のばらつきの原因を分析する"},"relatedTools":{"en":["ANOVA","Control Chart"],"ja":["分散分析","管理図"]},"description":{"en":"A graphical tool that helps identify root causes of excessive variation, especially useful for dimensional variations.","ja":"過度のばらつきの根本原因を特定するのに役立つグラフィカルツールで、特に寸法ばらつきに有用です。"},"url":"https://asq.org/quality-progress/articles/case-studies/the-multi-vari-chart-an-underutilized-quality-tool?id=d23574b44b3d49b88e9dcdddc4785cbb","alLinks":[]},
+        {"id":95,"symbol":"RA","name":{"en":"Regression Analysis","ja":"回帰分析"},"category":{"en":"Data Analysis, Six Sigma Tools","ja":"データ分析, シックスシグマツール"},"dmaicPhase":{"en":"Analyze","ja":"分析"},"purpose":{"en":"Examines relationships between variables","ja":"変数間の関係を調べる"},"relatedTools":{"en":["Correlation Analysis","Scatter Diagram"],"ja":["相関分析","散布図"]},"description":{"en":"Statistical methods for determining the relationships between variables and using those relationships to forecast future outcomes.","ja":"変数間の関係を決定し、それらの関係を使用して将来の結果を予測するための統計的手法。"},"url":"https://asq.org/training/regression-analysis-ratqg","alLinks":[]},
+        {"id":96,"symbol":"ANOVA","name":{"en":"Analysis of Variance","ja":"分散分析 (ANOVA)"},"category":{"en":"Data Analysis, Six Sigma Tools","ja":"データ分析, シックスシグマツール"},"dmaicPhase":{"en":"Analyze","ja":"分析"},"purpose":{"en":"Compares means of different groups","ja":"異なるグループの平均を比較する"},"relatedTools":{"en":["Hypothesis Testing","t-test"],"ja":["仮説検定","t検定"]},"description":{"en":"A basic statistical technique for determining the proportion of influence a factor or set of factors has on total variation.","ja":"因子または因子セットが総変動に与える影響の割合を決定するための基本的な統計的手法。"},"url":"https://asq.org/quality-resources/articles/measurement-system-analysis-in-a-production-environment-with-multiple-test-parameters?id=9815e215fbb040c08440dcfab75cb798","alLinks":[]},
+        {"id":97,"symbol":"CORA","name":{"en":"Correlation Analysis","ja":"相関分析"},"category":{"en":"Data Analysis, Six Sigma Tools","ja":"データ分析, シックスシグマツール"},"dmaicPhase":{"en":"Analyze","ja":"分析"},"purpose":{"en":"Measures strength of relationship between variables","ja":"変数間の関係の強さを測定する"},"relatedTools":{"en":["Regression Analysis","Scatter Diagram"],"ja":["回帰分析","散布図"]},"description":{"en":"An indication of the strength and direction of a linear relationship between two variables.","ja":"2つの変数間の線形関係の強さと方向を示す指標。"},"url":"https://asq.org/training/correlation-and-regression-crasq","alLinks":[]},
+        {"id":98,"symbol":"BP","name":{"en":"Box Plot","ja":"箱ひげ図"},"category":{"en":"Data Analysis","ja":"データ分析"},"dmaicPhase":{"en":"Measure, Analyze","ja":"測定, 分析"},"purpose":{"en":"Displays distribution of data sets","ja":"データセットの分布を表示する"},"relatedTools":{"en":["Histogram","Descriptive Statistics"],"ja":["ヒストグラム","記述統計"]},"description":{"en":"A graphical method of displaying variation in a set of data, providing additional detail to a histogram and allowing multiple sets of data to be displayed. Also called box and whisker plot.","ja":"データセットのばらつきを表示するグラフィカルな方法で、ヒストグラムに詳細を加え、複数のデータセットを表示できます。箱ひげ図とも呼ばれます。"},"url":"https://asq.org/quality-resources/box-whisker-plot","alLinks":[]},
+        {"id":99,"symbol":"TSA","name":{"en":"Time Series Analysis","ja":"時系列分析"},"category":{"en":"Data Analysis","ja":"データ分析"},"dmaicPhase":{"en":"Measure, Analyze, Control","ja":"測定, 分析, 管理"},"purpose":{"en":"Analyzes data points collected over time","ja":"時系列で収集されたデータポイントを分析する"},"relatedTools":{"en":["Control Chart","Run Chart"],"ja":["管理図","ランチャート"]},"description":{"en":"An approach to involve managers in using time series charts to monitor financial results and use trends to make decisions.","ja":"マネージャーが時系列チャートを使用して財務結果を監視し、トレンドを使用して意思決定を行うためのアプローチ。"},"url":"https://asq.org/quality-resources/articles/using-time-series-charts-to-analyze-financial-data?id=9487fb6126264949ab265bc4a4893631","alLinks":[]},
+        {"id":100,"symbol":"GC","name":{"en":"Gantt Chart","ja":"ガントチャート"},"category":{"en":"Project Management","ja":"プロジェクトマネジメント"},"dmaicPhase":{"en":"Define, Improve, Control","ja":"定義, 改善, 管理"},"purpose":{"en":"Schedules project activities","ja":"プロジェクト活動をスケジュールする"},"relatedTools":{"en":["Critical Path Method","Activity Network Diagram"],"ja":["クリティカルパス法","アローダイアグラム"]},"description":{"en":"A bar chart that shows the tasks of a project, when each task must take place, and how long each task will take to complete.","ja":"プロジェクトのタスク、各タスクがいつ行われるべきか、各タスクが完了するまでにかかる時間を示す棒グラフ。"},"url":"https://asq.org/quality-resources/gantt-chart","alLinks":[]},
+        {"id":101,"symbol":"CPM","name":{"en":"Critical Path Method","ja":"クリティカルパス法 (CPM)"},"category":{"en":"Project Management, Advanced Quality Tool","ja":"プロジェクトマネジメント, 高度な品質ツール"},"dmaicPhase":{"en":"Define, Improve","ja":"定義, 改善"},"purpose":{"en":"Identifies critical activities","ja":"重要な活動を特定する"},"relatedTools":{"en":["Gantt Chart","PERT"],"ja":["ガントチャート","PERT"]},"description":{"en":"The flow of critical steps where delays can affect the timing of the entire project. Calculated using an arrow diagram.","ja":"遅延がプロジェクト全体のタイミングに影響を与える可能性のある重要なステップの流れ。アローダイアグラムを使用して計算されます。"},"url":"https://asq.org/quality-resources/arrow-diagram","alLinks":[]},
+        {"id":102,"symbol":"RAM","name":{"en":"Risk Assessment Matrix","ja":"リスク評価マトリックス"},"category":{"en":"Project Management, Decision-Making","ja":"プロジェクトマネジメント, 意思決定"},"dmaicPhase":{"en":"Define, Analyze, Improve, Control","ja":"定義, 分析, 改善, 管理"},"purpose":{"en":"Evaluates risks","ja":"リスクを評価する"},"relatedTools":{"en":["FMEA","PDPC"],"ja":["FMEA","PDPC法"]},"description":{"en":"A tool that helps visualize the probability versus the severity of a potential risk, allowing prioritization.","ja":"潜在的なリスクの確率と深刻度を視覚化し、優先順位付けを可能にするツール。"},"url":"https://auditboard.com/blog/what-is-a-risk-assessment-matrix/","alLinks":[]},
+        {"id":103,"symbol":"SA","name":{"en":"Stakeholder Analysis","ja":"ステークホルダー分析"},"category":{"en":"Project Management","ja":"プロジェクトマネジメント"},"dmaicPhase":{"en":"Define, All DMAIC Phases","ja":"定義, 全DMAICフェーズ"},"purpose":{"en":"Identifies and analyzes stakeholders","ja":"利害関係者を特定し分析する"},"relatedTools":{"en":["Communication Plan","Power/Interest Grid"],"ja":["コミュニケーション計画","パワー/インタレストグリッド"]},"description":{"en":"A tool organizations can use to clearly identify key stakeholders for a project or other activity, understand where stakeholders stand, and develop cooperation.","ja":"組織がプロジェクトやその他の活動の主要な利害関係者を明確に特定し、利害関係者の立場を理解し、協力を築くために使用できるツール。"},"url":"https://asq.org/quality-resources/stakeholders","alLinks":[]},
+        {"id":104,"symbol":"WBS","name":{"en":"Work Breakdown Structure","ja":"WBS"},"category":{"en":"Project Management","ja":"プロジェクトマネジメント"},"dmaicPhase":{"en":"Define","ja":"定義"},"purpose":{"en":"Decomposes project into manageable components","ja":"プロジェクトを管理可能な構成要素に分解する"},"relatedTools":{"en":["Tree Diagram","Gantt Chart"],"ja":["系統図","ガントチャート"]},"description":{"en":"A tool that displays a lot of work detail and defines the scope of the project. As one moves down the levels, there is greater detail on project activities.","ja":"多くの作業詳細を表示し、プロジェクトの範囲を定義するツール。レベルが下がるにつれて、プロジェクト活動に関する詳細が増えます。"},"url":"https://asq.org/quality-resources/articles/managing-a-project-from-a-to-z?id=9c00578841424d95a8cc1b97930f02de","alLinks":[]},
+        {"id":105,"symbol":"PERT","name":{"en":"Program Evaluation and Review Technique","ja":"PERT"},"category":{"en":"Project Management, Advanced Quality Tool","ja":"プロジェクトマネジメント, 高度な品質ツール"},"dmaicPhase":{"en":"Define, Improve","ja":"定義, 改善"},"purpose":{"en":"Analyzes and represents tasks","ja":"タスクを分析し表現する"},"relatedTools":{"en":["Critical Path Method","Activity Network Diagram"],"ja":["クリティカルパス法 (CPM)","アローダイアグラム"]},"description":{"en":"A method to analyze the tasks involved in completing a project, especially the time needed to complete each task... Often used with arrow diagrams.","ja":"プロジェクトを完了するために必要なタスク、特に各タスクを完了するために必要な時間を分析する方法... しばしばアローダイアグラムと共に使用されます。"},"url":"https://asq.org/quality-resources/arrow-diagram (Arrow diagram page also covers PERT)","alLinks":[]},
+        {"id":106,"symbol":"MC","name":{"en":"Milestone Chart","ja":"マイルストーンチャート"},"category":{"en":"Project Management","ja":"プロジェクトマネジメント"},"dmaicPhase":{"en":"Define, Control","ja":"定義, 管理"},"purpose":{"en":"Tracks key project events","ja":"主要なプロジェクトイベントを追跡する"},"relatedTools":{"en":["Gantt Chart","Project Charter"],"ja":["ガントチャート","プロジェクト憲章"]},"description":{"en":"A Gantt chart variation where interim checkpoints (milestones) are added.","ja":"ガントチャートの一種で、中間チェックポイント（マイルストーン）が追加されたもの。"},"url":"https://asq.org/quality-resources/gantt-chart (mentions milestone chart as a type of Gantt chart)","alLinks":[]},
+        {"id":107,"symbol":"RH","name":{"en":"Resource Histogram","ja":"リソースヒストグラム"},"category":{"en":"Project Management","ja":"プロジェクトマネジメント"},"dmaicPhase":{"en":"Define, Improve, Control","ja":"定義, 改善, 管理"},"purpose":{"en":"Shows resource allocation over time","ja":"時間経過に伴うリソースの配分を示す"},"relatedTools":{"en":["Gantt Chart","Resource Leveling"],"ja":["ガントチャート","リソース平準化"]},"description":{"en":"A bar chart that shows how personnel, teams, or equipment are distributed across project phases, assisting in identifying times of excessive or insufficient consumption.","ja":"人員、チーム、または設備がプロジェクトの各段階にどのように配分されているかを示す棒グラフで、過剰または不十分な消費の時期を特定するのに役立ちます。"},"url":"https://staragile.com/blog/resource-histogram-in-project-management","alLinks":[]},
+        {"id":108,"symbol":"EVM","name":{"en":"Earned Value Management","ja":"アーンド・バリュー・マネジメント (EVM)"},"category":{"en":"Project Management, Data Analysis","ja":"プロジェクトマネジメント, データ分析"},"dmaicPhase":{"en":"Measure, Control","ja":"測定, 管理"},"purpose":{"en":"Measures project performance","ja":"プロジェクトのパフォーマンスを測定する"},"relatedTools":{"en":["Gantt Chart","Project Cost Management"],"ja":["ガントチャート","プロジェクトコスト管理"]},"description":{"en":"A method that allows the project manager to measure the amount of work actually performed on a project beyond the basic review of cost and schedule reports.","ja":"プロジェクトマネージャーが、コストとスケジュールの基本的なレビューを超えて、プロジェクトで実際に実行された作業量を測定できる手法。"},"url":"https://www.pmi.org/learning/library/earned-value-management-systems-analysis-8026","alLinks":[]},
+        {"id":109,"symbol":"DM","name":{"en":"Decision Matrix","ja":"決定マトリックス"},"category":{"en":"Decision-Making, Advanced Quality Tool","ja":"意思決定, 高度な品質ツール"},"dmaicPhase":{"en":"Analyze, Improve","ja":"分析, 改善"},"purpose":{"en":"Evaluates and prioritizes options","ja":"選択肢を評価し優先順位付けする"},"relatedTools":{"en":["Matrix Diagram","Cost-Benefit Analysis"],"ja":["マトリックス図","費用便益分析"]},"description":{"en":"Evaluates and prioritizes a list of options using predetermined weighted criteria. A variation of the L-shaped matrix.","ja":"あらかじめ定められた重み付け基準を使用して、選択肢のリストを評価し優先順位付けします。L字型マトリックスの一種です。"},"url":"https://asq.org/quality-resources/decision-matrix","alLinks":[]},
+        {"id":110,"symbol":"FFA","name":{"en":"Force Field Analysis","ja":"フォースフィールド分析"},"category":{"en":"Decision-Making, Problem Identification","ja":"意思決定, 問題特定"},"dmaicPhase":{"en":"Analyze, Improve","ja":"分析, 改善"},"purpose":{"en":"Analyzes forces for and against change","ja":"変化に対する推進力と抵抗力を分析する"},"relatedTools":{"en":["SWOT Analysis","Decision Matrix"],"ja":["SWOT分析","決定マトリックス"]},"description":{"en":"A basic tool for root cause analysis that can help take action once the root cause has been identified. Based on the assumption that any situation is the result of forces for and against...","ja":"根本原因が特定された後に行動を起こすのに役立つ、根本原因分析の基本的なツール。いかなる状況も推進力と抵抗力の結果であるという仮定に基づいています..."},"url":"https://asq.org/quality-resources/force-field-analysis","alLinks":[]},
+        {"id":111,"symbol":"CBA","name":{"en":"Cost-Benefit Analysis","ja":"費用便益分析"},"category":{"en":"Decision-Making, Data Analysis","ja":"意思決定, データ分析"},"dmaicPhase":{"en":"Analyze, Improve","ja":"分析, 改善"},"purpose":{"en":"Evaluates costs versus benefits","ja":"コストと利益を評価する"},"relatedTools":{"en":["Decision Matrix","ROI Analysis"],"ja":["決定マトリックス","ROI分析"]},"description":{"en":"A systematic approach for evaluating the potential costs and benefits of a project or decision.","ja":"プロジェクトや決定の潜在的なコストと利益を評価するための体系的なアプローチ。"},"url":"https://my.asq.org/blogs/barbara-banek/2024/02/22/asq (mentions Cost Benefit Analysis)","alLinks":[]},
+        {"id":112,"symbol":"DLPI","name":{"en":"Delphi Method","ja":"デルファイ法"},"category":{"en":"Decision-Making, Advanced Quality Tool","ja":"意思決定, 高度な品質ツール"},"dmaicPhase":{"en":"Analyze, Define","ja":"分析, 定義"},"purpose":{"en":"Structured communication technique","ja":"構造化されたコミュニケーション技法"},"relatedTools":{"en":["Nominal Group Technique","Expert Opinion"],"ja":["名目集団法 (NGT)","専門家の意見"]},"description":{"en":"A structured communication technique originally developed as a systematic, interactive forecasting method which relies on a panel of experts.","ja":"元々は専門家のパネルに依存する体系的で対話的な予測方法として開発された、構造化されたコミュニケーション技法。"},"url":"https://asq.org/quality-resources/idea-creation-tools (mentions Delphi method)","alLinks":[]},
+        {"id":113,"symbol":"DT","name":{"en":"Decision Tree","ja":"決定木"},"category":{"en":"Decision-Making, Data Analysis","ja":"意思決定, データ分析"},"dmaicPhase":{"en":"Analyze, Improve","ja":"分析, 改善"},"purpose":{"en":"Maps out possible decisions and consequences","ja":"可能な決定と結果をマッピングする"},"relatedTools":{"en":["Cost-Benefit Analysis","Risk Assessment"],"ja":["費用便益分析","リスク評価"]},"description":{"en":"A graphical representation of possible solutions to a decision based on certain conditions, helping to identify the most effective course of action.","ja":"特定の条件に基づいた決定に対する可能な解決策のグラフィカルな表現で、最も効果的な行動方針を特定するのに役立ちます。"},"url":"https://asq.org/quality-progress/articles/back-to-basics-a-call-for-improvement?id=c66677ceca7540d3826548cddec34025 (mentions decision tree)","alLinks":[]},
+        {"id":114,"symbol":"PCA","name":{"en":"Paired Comparison Analysis","ja":"一対比較分析"},"category":{"en":"Decision-Making, Advanced Quality Tool","ja":"意思決定, 高度な品質ツール"},"dmaicPhase":{"en":"Analyze, Improve","ja":"分析, 改善"},"purpose":{"en":"Compares options in pairs","ja":"選択肢をペアで比較する"},"relatedTools":{"en":["Decision Matrix","Prioritization Matrix"],"ja":["決定マトリックス","優先順位付けマトリックス"]},"description":{"en":"A technique of comparing entities in pairs to judge which of each entity is preferred, or has a greater amount of some quantitative property.","ja":"エンティティをペアで比較し、各エンティティのどちらが好ましいか、またはある定量的特性をより多く持っているかを判断する技法。"},"url":"https://asq.org/quality-resources/decision-matrix (related as a decision-making approach)","alLinks":[]},
+        {"id":115,"symbol":"GRDA","name":{"en":"Grid Analysis","ja":"グリッド分析"},"category":{"en":"Decision-Making, Advanced Quality Tool","ja":"意思決定, 高度な品質ツール"},"dmaicPhase":{"en":"Analyze, Improve","ja":"分析, 改善"},"purpose":{"en":"Analyzes options against weighted criteria","ja":"重み付けされた基準に対して選択肢を分析する"},"relatedTools":{"en":["Decision Matrix","Prioritization Matrix"],"ja":["決定マトリックス","優先順位付けマトリックス"]},"description":{"en":"A decision-making tool that allows systematic analysis of options against multiple criteria, with each criterion weighted according to its importance. Often used with Decision Matrix.","ja":"各基準がその重要性に応じて重み付けされた複数の基準に対して、選択肢を体系的に分析できる意思決定ツール。しばしば決定マトリックスと共に使用されます。"},"url":"https://asana.com/resources/decision-matrix-examples","alLinks":[]},
+        {"id":116,"symbol":"PMI","name":{"en":"Plus/Minus/Interesting","ja":"PMI分析"},"category":{"en":"Decision-Making, Problem Identification","ja":"意思決定, 問題特定"},"dmaicPhase":{"en":"Analyze, Define","ja":"分析, 定義"},"purpose":{"en":"Evaluates pros, cons, and implications","ja":"長所、短所、および示唆を評価する"},"relatedTools":{"en":["Force Field Analysis","SWOT Analysis"],"ja":["フォースフィールド分析","SWOT分析"]},"description":{"en":"A decision-making and evaluative tool that enables individuals or groups to systematically analyze a topic by categorizing aspects into Plus (positives), Minus (negatives)...","ja":"個人やグループがトピックをプラス（肯定的側面）、マイナス（否定的側面）、興味深い点（示唆）に分類して体系的に分析できる意思決定および評価ツール..."},"url":"https://www.larksuite.com/en_us/topics/meeting-glossary/plus-minus-interesting-pmi","alLinks":[]},
+        {"id":117,"symbol":"ISO","name":{"en":"ISO 9001","ja":"ISO 9001"},"category":{"en":"Quality Systems","ja":"品質システム"},"dmaicPhase":{"en":"N/A (Standard)","ja":"N/A (規格)"},"purpose":{"en":"International standard for quality management systems","ja":"品質マネジメントシステムの国際規格"},"relatedTools":{"en":["Quality Manual","Process Auditing"],"ja":["品質マニュアル","プロセス監査"]},"description":{"en":"A standard within the ISO 9000 family that lays out the requirements for a quality management system (QMS).","ja":"ISO 9000ファミリー内の規格で、品質マネジメントシステム（QMS）の要件を定めています。"},"url":"https://asq.org/quality-resources/iso-9000","alLinks":[]},
+        {"id":118,"symbol":"QM","name":{"en":"Quality Manual","ja":"品質マニュアル"},"category":{"en":"Quality Systems","ja":"品質システム"},"dmaicPhase":{"en":"N/A (Document)","ja":"N/A (文書)"},"purpose":{"en":"Documents quality management system","ja":"品質マネジメントシステムを文書化する"},"relatedTools":{"en":["ISO 9001","Document Control"],"ja":["ISO 9001","文書管理"]},"description":{"en":"A document that explains the general procedures for the implementation of a Quality System in accordance with the requirements of a standard like ISO 9001.","ja":"ISO 9001などの規格の要件に従って品質システムを実施するための一般的な手順を説明する文書。"},"url":"https://www.drexelbrook.com/-/media/ametekdrexelbrook/download_links/quality-manual2.pdf?la=en&revision=cea7516b-db38-4894-a06a-07f41683216d","alLinks":[]},
+        {"id":119,"symbol":"PA","name":{"en":"Process Auditing","ja":"プロセス監査"},"category":{"en":"Quality Systems","ja":"品質システム"},"dmaicPhase":{"en":"Control, Measure","ja":"管理, 測定"},"purpose":{"en":"Evaluates process compliance and effectiveness","ja":"プロセスのコンプライアンスと有効性を評価する"},"relatedTools":{"en":["ISO 9001","Management Review"],"ja":["ISO 9001","マネジメントレビュー"]},"description":{"en":"Verifies that processes are working within established limits. It evaluates an operation or method against predetermined instructions or standards.","ja":"プロセスが確立された範囲内で機能していることを検証します。所定の指示や基準に対して操作や方法を評価します。"},"url":"https://asq.org/quality-resources/auditing (see Process audit)","alLinks":[]},
+        {"id":120,"symbol":"MR","name":{"en":"Management Review","ja":"マネジメントレビュー"},"category":{"en":"Quality Systems","ja":"品質システム"},"dmaicPhase":{"en":"Control, Improve","ja":"管理, 改善"},"purpose":{"en":"Evaluates quality system performance","ja":"品質システムのパフォーマンスを評価する"},"relatedTools":{"en":["Process Auditing","Quality Objectives"],"ja":["プロセス監査","品質目標"]},"description":{"en":"A top management meeting held at planned intervals to review the continuing suitability and effectiveness of one or more of an organization's management system(s).","ja":"組織の一つ以上のマネジメントシステムの継続的な適合性と有効性をレビューするために、計画された間隔で開催されるトップマネジメントの会議。"},"url":"https://asq.org/quality-resources/quality-glossary/m (see entry for Management review)","alLinks":[]},
+        {"id":121,"symbol":"CPA","name":{"en":"Corrective and Preventive Action","ja":"是正処置・予防処置 (CAPA)"},"category":{"en":"Quality Systems, Problem Identification","ja":"品質システム, 問題特定"},"dmaicPhase":{"en":"Improve, Control, Analyze","ja":"改善, 管理, 分析"},"purpose":{"en":"Addresses nonconformities","ja":"不適合に対処する"},"relatedTools":{"en":["Root Cause Analysis","Process Auditing"],"ja":["根本原因分析 (RCA)","プロセス監査"]},"description":{"en":"A corrective action deals with a nonconformity that has occurred, and a preventive action addresses the potential for a nonconformity to occur.","ja":"是正処置は発生した不適合に対処し、予防処置は不適合が発生する可能性に対処します。"},"url":"https://asq.org/quality-progress/articles/corrective-vs-preventive-action?id=f5c21a6abfea4bbe8d0c079b430e33a3","alLinks":[]},
+        {"id":122,"symbol":"DC","name":{"en":"Document Control","ja":"文書管理"},"category":{"en":"Quality Systems","ja":"品質システム"},"dmaicPhase":{"en":"Control","ja":"管理"},"purpose":{"en":"Manages quality documentation","ja":"品質文書を管理する"},"relatedTools":{"en":["Quality Manual","ISO 9001"],"ja":["品質マニュアル","ISO 9001"]},"description":{"en":"A management system supporting process that ensures documents are reviewed, approved, and available, and that changes are controlled. Essential for systems like ISO 14001 and ISO 9001.","ja":"文書がレビュー、承認され、利用可能であり、変更が管理されていることを保証するマネジメントシステムの支援プロセス。ISO 14001やISO 9001などのシステムに不可欠です。"},"url":"https://asq.org/quality-resources/environmental-management-system (mentions document control)","alLinks":[]},
+        {"id":123,"symbol":"QP","name":{"en":"Quality Policy","ja":"品質方針"},"category":{"en":"Quality Systems","ja":"品質システム"},"dmaicPhase":{"en":"Define","ja":"定義"},"purpose":{"en":"Establishes quality intentions and direction","ja":"品質に関する意図と方向性を確立する"},"relatedTools":{"en":["Quality Objectives","Management Review"],"ja":["品質目標","マネジメントレビュー"]},"description":{"en":"A formal document that defines an organization's vision and commitment to quality standards, guiding employees and satisfying stakeholders.","ja":"組織のビジョンと品質基準へのコミットメントを定義し、従業員を導き、利害関係者を満足させる公式文書。"},"url":"https://www.6sigma.us/six-sigma-in-focus/quality-policy/","alLinks":[]},
+        {"id":124,"symbol":"QO","name":{"en":"Quality Objectives","ja":"品質目標"},"category":{"en":"Quality Systems","ja":"品質システム"},"dmaicPhase":{"en":"Define, Measure, Control","ja":"定義, 測定, 管理"},"purpose":{"en":"Specific quality goals","ja":"具体的な品質目標"},"relatedTools":{"en":["Quality Policy","Management Review"],"ja":["品質方針","マネジメントレビュー"]},"description":{"en":"Measurable goals set by an organization to achieve its quality policy. Part of a Quality Management System.","ja":"組織が品質方針を達成するために設定する測定可能な目標。品質マネジメントシステムの一部です。"},"url":"https://www.ease.io/blog/quality-management-system-in-manufacturing/ (mentions quality objectives)","alLinks":[]},
+        {"id":125,"symbol":"QPl","name":{"en":"Quality Planning","ja":"品質計画"},"category":{"en":"Quality Systems, Project Management","ja":"品質システム, プロジェクトマネジメント"},"dmaicPhase":{"en":"Define, Improve","ja":"定義, 改善"},"purpose":{"en":"Establishes quality processes and resources","ja":"品質プロセスとリソースを確立する"},"relatedTools":{"en":["Quality Policy","Quality Objectives"],"ja":["品質方針","品質目標"]},"description":{"en":"Involves carrying out a project through its phases with zero deviations from specifications, focusing on quality policies, plans, procedures, programs, and specifications.","ja":"仕様からの逸脱ゼロでプロジェクトを各フェーズを通じて実行することを含み、品質方針、計画、手順、プログラム、仕様に焦点を当てます。"},"url":"https://www.pmi.org/learning/library/quality-management-9107 (mentions Quality Planning)","alLinks":[]},
+        {"id":126,"symbol":"QA","name":{"en":"Quality Assurance","ja":"品質保証 (QA)"},"category":{"en":"Quality Systems","ja":"品質システム"},"dmaicPhase":{"en":"Control, Improve","ja":"管理, 改善"},"purpose":{"en":"Ensures quality requirements will be fulfilled","ja":"品質要求事項が満たされることを保証する"},"relatedTools":{"en":["Process Auditing","Quality Planning"],"ja":["プロセス監査","品質計画"]},"description":{"en":"All the planned and systematic activities implemented within the quality system that can be demonstrated to provide confidence that a product or service will fulfill requirements.","ja":"製品やサービスが要求事項を満たすという信頼を提供できることを実証するために、品質システム内で実施されるすべての計画的かつ体系的な活動。"},"url":"https://asq.org/quality-resources/quality-assurance-vs-control","alLinks":[]},
+        {"id":127,"symbol":"AUD","name":{"en":"Audits","ja":"監査"},"category":{"en":"Quality Systems","ja":"品質システム"},"dmaicPhase":{"en":"Control, Measure, Improve","ja":"管理, 測定, 改善"},"purpose":{"en":"Evaluates compliance with standards and identifies improvement opportunities","ja":"基準への準拠を評価し、改善機会を特定する"},"relatedTools":{"en":["Checklists","Nonconformance Reports"],"ja":["チェックリスト","不適合報告書"]},"description":{"en":"The on-site verification activity, such as inspection or examination, of a process or quality system, to ensure compliance to requirements.","ja":"要求事項への準拠を保証するための、プロセスや品質システムの現場での検証活動（検査や審査など）。"},"url":"https://asq.org/quality-resources/auditing","alLinks":[]},
+        {"id":128,"symbol":"8D","name":{"en":"8 Disciplines of Problem Solving","ja":"8D問題解決プロセス"},"category":{"en":"Quality Systems, Problem Identification","ja":"品質システム, 問題特定"},"dmaicPhase":{"en":"Analyze, Improve, Control","ja":"分析, 改善, 管理"},"purpose":{"en":"Structured team approach for solving complex problems and preventing recurrence","ja":"複雑な問題を解決し、再発を防止するための構造化されたチームアプローチ"},"relatedTools":{"en":["RCA","Corrective Action"],"ja":["根本原因分析 (RCA)","是正処置"]},"description":{"en":"A scientific, systematic approach, often customer-driven, to resolve specific complaints and prevent recurrence.","ja":"特定の苦情を解決し、再発を防ぐための、科学的で体系的なアプローチ。しばしば顧客主導で行われます。"},"url":"https://asq.org/quality-resources/articles/an-introduction-to-8d-problem-solving?id=58c031fb9ab84795adf903ca7b23905a","alLinks":[]},
+        {"id":129,"symbol":"QFD","name":{"en":"Quality Function Deployment","ja":"品質機能展開 (QFD)"},"category":{"en":"Advanced Quality Tool, Six Sigma Tools","ja":"高度な品質ツール, シックスシグマツール"},"dmaicPhase":{"en":"Define, Design (DMADV)","ja":"定義, 設計 (DMADV)"},"purpose":{"en":"Translates customer requirements into design specifications","ja":"顧客の要求を設計仕様に変換する"},"relatedTools":{"en":["Voice of Customer","House of Quality"],"ja":["顧客の声 (VOC)","品質の家"]},"description":{"en":"A focused methodology for carefully listening to the voice of the customer and then effectively responding to those needs and expectations. Uses the House of Quality matrix.","ja":"顧客の声に注意深く耳を傾け、それらのニーズと期待に効果的に応えるための集中的な方法論。品質の家（House of Quality）マトリックスを使用します。"},"url":"https://asq.org/quality-resources/qfd-quality-function-deployment","alLinks":[]},
+        {"id":130,"symbol":"KM","name":{"en":"Kano Model","ja":"狩野モデル"},"category":{"en":"Data Analysis","ja":"データ分析"},"dmaicPhase":{"en":"Define, Analyze","ja":"定義, 分析"},"purpose":{"en":"Categorizes customer preferences","ja":"顧客の好みを分類する"},"relatedTools":{"en":["QFD","Voice of Customer"],"ja":["品質機能展開 (QFD)","顧客の声 (VOC)"]},"description":{"en":"Three classes of customer requirements: satisfiers (what customers say they want), dissatisfiers (what customers expect), and delighters/exciters (new or unexpected features).","ja":"顧客要求の3つのクラス：充足要因（顧客が欲しいと言うもの）、不満要因（顧客が期待するもの）、そして魅力的品質（新しいまたは予期せぬ特徴）。"},"url":"https://asq.org/quality-resources/quality-glossary/k (see entry for Kano model)","alLinks":[]},
+        {"id":131,"symbol":"CSUR","name":{"en":"Customer Surveys","ja":"顧客アンケート"},"category":{"en":"Data Analysis","ja":"データ分析"},"dmaicPhase":{"en":"Measure, Define","ja":"測定, 定義"},"purpose":{"en":"Collects customer feedback","ja":"顧客のフィードバックを収集する"},"relatedTools":{"en":["Voice of Customer","Net Promoter Score"],"ja":["顧客の声 (VOC)","ネットプロモータースコア"]},"description":{"en":"A method to gather information from customers about their satisfaction, preferences, and experiences. Used to determine and deploy customer needs.","ja":"顧客の満足度、好み、経験に関する情報を収集する方法。顧客のニーズを決定し展開するために使用されます。"},"url":"https://asq.org/training/introduction-to-quality-management-vitqm","alLinks":[]},
+        {"id":132,"symbol":"NPS","name":{"en":"Net Promoter Score","ja":"ネットプロモータースコア (NPS)"},"category":{"en":"Data Analysis","ja":"データ分析"},"dmaicPhase":{"en":"Measure, Control","ja":"測定, 管理"},"purpose":{"en":"Measures customer loyalty","ja":"顧客のロイヤルティを測定する"},"relatedTools":{"en":["Customer Surveys","Voice of Customer"],"ja":["顧客アンケート","顧客の声 (VOC)"]},"description":{"en":"An index ranging from -100 to 100 that measures the willingness of customers to recommend a company's products or services to others.","ja":"-100から100の範囲の指数で、顧客が企業の製品やサービスを他人に推薦する意欲を測定します。"},"url":"https://www.medallia.com/net-promoter-score/","alLinks":[]},
+        {"id":133,"symbol":"CJM","name":{"en":"Customer Journey Mapping","ja":"カスタマージャーニーマップ"},"category":{"en":"Process Management","ja":"プロセスマネジメント"},"dmaicPhase":{"en":"Define, Analyze, Measure","ja":"定義, 分析, 測定"},"purpose":{"en":"Maps customer experience","ja":"顧客体験をマッピングする"},"relatedTools":{"en":["Service Blueprinting","Empathy Mapping"],"ja":["サービスブループリント","共感マップ"]},"description":{"en":"The process of visually defining and depicting the actions and perceptions of customers as they move through a relationship with a company.","ja":"顧客が企業との関係を通じて移動する際の行動と認識を視覚的に定義し描写するプロセス。"},"url":"https://www.genesys.com/article/customer-journey-mapping-a-step-by-step-guide","alLinks":[]},
+        {"id":134,"symbol":"SB","name":{"en":"Service Blueprinting","ja":"サービスブループリント"},"category":{"en":"Process Management","ja":"プロセスマネジメント"},"dmaicPhase":{"en":"Define, Analyze, Measure","ja":"定義, 分析, 測定"},"purpose":{"en":"Maps service processes from customer perspective","ja":"顧客の視点からサービスプロセスをマッピングする"},"relatedTools":{"en":["Customer Journey Mapping","Process Mapping"],"ja":["カスタマージャーニーマップ","プロセスマッピング"]},"description":{"en":"A tool that helps teams understand how the customer sees or experiences a business's service process by visualizing relationships between people, processes, and touchpoints.","ja":"人、プロセス、タッチポイント間の関係を視覚化することで、チームが顧客がビジネスのサービスプロセスをどのように見たり経験したりするかを理解するのに役立つツール。"},"url":"https://miro.com/customer-journey-map/how-to-make-effective-service-blueprints/","alLinks":[]},
+        {"id":135,"symbol":"EM","name":{"en":"Empathy Mapping","ja":"共感マップ"},"category":{"en":"Problem Identification","ja":"問題特定"},"dmaicPhase":{"en":"Define, Analyze","ja":"定義, 分析"},"purpose":{"en":"Visualizes customer attitudes and behaviors","ja":"顧客の態度と行動を視覚化する"},"relatedTools":{"en":["Customer Journey Mapping","Voice of Customer"],"ja":["カスタマージャーニーマップ","顧客の声 (VOC)"]},"description":{"en":"A collaborative visualization used to articulate what is known about a particular type of user, focusing on what they say, think, do, and feel to understand their needs.","ja":"特定のタイプのユーザーについて知られていることを明確にするために使用される共同の視覚化ツールで、彼らが何を言い、考え、行い、感じるかに焦点を当てて、彼らのニーズを理解します。"},"url":"https://www.atlassian.com/work-management/project-management/empathy-map","alLinks":[]},
+        {"id":136,"symbol":"CSEG","name":{"en":"Customer Segmentation","ja":"顧客セグメンテーション"},"category":{"en":"Data Analysis","ja":"データ分析"},"dmaicPhase":{"en":"Define, Analyze","ja":"定義, 分析"},"purpose":{"en":"Groups customers with similar needs","ja":"類似のニーズを持つ顧客をグループ化する"},"relatedTools":{"en":["Voice of Customer","Kano Model"],"ja":["顧客の声 (VOC)","狩野モデル"]},"description":{"en":"The process of dividing customers into groups based on common characteristics so companies can market to each group effectively and efficiently.","ja":"共通の特性に基づいて顧客をグループに分割するプロセスで、企業が各グループに効果的かつ効率的にマーケティングできるようにします。"},"url":"https://asq.org/quality-progress/articles/case-studies/customer-value-analysis-helps-hone-strategy?id=9cecac97a57f4ca8981c4b09dce60bc2","alLinks":[]},
+        {"id":137,"symbol":"CNJA","name":{"en":"Conjoint Analysis","ja":"コンジョイント分析"},"category":{"en":"Data Analysis, Advanced Quality Tool","ja":"データ分析, 高度な品質ツール"},"dmaicPhase":{"en":"Define, Analyze","ja":"定義, 分析"},"purpose":{"en":"Determines how customers value different features","ja":"顧客が異なる特徴をどのように評価するかを決定する"},"relatedTools":{"en":["Voice of Customer","Kano Model"],"ja":["顧客の声 (VOC)","狩野モデル"]},"description":{"en":"A survey-based research method for measuring the value that consumers place on the features of a product or service by testing different combinations of components.","ja":"コンポーネントの異なる組み合わせをテストすることにより、消費者が製品やサービスの機能に置く価値を測定するための調査ベースの研究手法。"},"url":"https://resources.pollfish.com/market-research/what-is-conjoint-analysis-and-how-to-apply-it-in-the-pollfish-platform/","alLinks":[]}
+    ];
+
+    // --- APPLICATION STATE & GLOBAL VARIABLES ---
+    let toolsData = [];
+    let gridLayout = Array(11).fill(null).map(() => Array(18).fill(null));
+    let currentLanguage = 'en';
+    let activeFilters = { type: null, value: null };
+
+    // --- DOM ELEMENT REFERENCES ---
+    const modal = document.getElementById('toolModal');
+    const periodicTableContainer = document.getElementById('periodicTable');
+    const searchInput = document.getElementById('searchToolInput');
+    
+    // --- INITIALIZATION ---
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeToolsData();
+        setupEventListeners();
+        updateUIText();
+    });
+    
+    // --- CORE LOGIC FUNCTIONS ---
+
+    /**
+     * @name initializeToolsData
+     * @description Processes the raw masterToolDetails, merges difficulty data, and prepares it for the app.
+     */
+    function initializeToolsData() {
+        if (!masterToolDetails || masterToolDetails.length === 0) {
+            console.error("masterToolDetails data is missing. Please paste the data array into the script.");
+            periodicTableContainer.innerHTML = `<p class="text-red-500 font-bold text-center col-span-18 p-10">Error: Tool data is missing. The application cannot load.</p>`;
+            return;
+        }
+
+        let tempToolsData = [];
+        masterToolDetails.forEach(item => {
+            const categoriesEN = item.category.en.split(',').map(p => p.trim()).filter(p => p);
+            const categoriesJA = item.category.ja.split(',').map(p => p.trim()).filter(p => p);
+
+            const dmaicPhasesEN = item.dmaicPhase.en.split(',').map(p => p.trim()).filter(p => p && p !== 'N/A' && !p.includes('(as gates)') && !p.includes('(Continuous)'));
+            const dmaicPhasesJA = item.dmaicPhase.ja.split(',').map(p => p.trim()).filter(p => p && p !== 'N/A' && !p.includes('(as gates)') && !p.includes('(Continuous)'));
+            
+            const isCimp = categoriesEN.includes("C-IMP Tool");
+            const difficulty = toolDifficultyData[item.name.en] || "Default";
+            
+            // **FIXED**: Tile color is now correctly based on DIFFICULTY
+            const style = difficultyStyles[difficulty] || difficultyStyles["Default"];
+
+            tempToolsData.push({
+                id: `${item.symbol}_${item.id}`, number: item.id, symbol: item.symbol, name: item.name,
+                purpose: item.purpose, description: item.description, relatedTools: item.relatedTools,
+                categories: { en: categoriesEN, ja: categoriesJA },
+                dmaicPhases: { en: dmaicPhasesEN.length > 0 ? [...new Set(dmaicPhasesEN)] : ["N/A"], ja: dmaicPhasesJA.length > 0 ? [...new Set(dmaicPhasesJA)] : ["N/A"]},
+                isCimp: isCimp, cimpLinkExternal: item.url,
+                cimpLinkAL: (item.alLinks && item.alLinks.length > 0) ? item.alLinks[0] : null,
+                difficulty: difficulty,
+                style: style // Style for the tile itself is now based on difficulty
+            });
+        });
+        toolsData = tempToolsData; 
+        populateGridThematically();
+    }
+    
+    /**
+     * @name populateGridThematically
+     * @description Manually places each tool into a specific cell of the `gridLayout` array for precise layout control.
+     */
+    function populateGridThematically() {
+        const cimpTools = toolsData.filter(t => t.isCimp).sort((a, b) => a.number - b.number);
+        const nonCimpTools = toolsData.filter(t => !t.isCimp).sort((a, b) => a.number - b.number);
+        gridLayout = Array(11).fill(null).map(() => Array(18).fill(null));
+        let nonCimpIndex = 0;
+        let cimpIndex = 0;
+
+        const placeTool = (tool, r, c) => {
+            if (tool && r < 11 && c < 18) {
+                gridLayout[r][c] = tool.id;
+                return true;
+            }
+            return false;
+        };
+
+        // --- Manual Placement Mapping ---
+        placeTool(nonCimpTools[nonCimpIndex++], 0, 0); placeTool(nonCimpTools[nonCimpIndex++], 0, 17);
+        placeTool(nonCimpTools[nonCimpIndex++], 1, 0); placeTool(nonCimpTools[nonCimpIndex++], 1, 1);
+        for (let i = 12; i < 18; i++) placeTool(nonCimpTools[nonCimpIndex++], 1, i);
+        placeTool(nonCimpTools[nonCimpIndex++], 2, 0); placeTool(nonCimpTools[nonCimpIndex++], 2, 1);
+        for (let i = 12; i < 18; i++) placeTool(nonCimpTools[nonCimpIndex++], 2, i);
+
+        for (let r = 3; r < 8; r++) {
+            for (let c = 0; c < 18; c++) {
+                 if(nonCimpIndex < nonCimpTools.length) {
+                     placeTool(nonCimpTools[nonCimpIndex++], r, c);
+                 }
+            }
+        }
+        
+        for (let r = 9; r < 11; r++) {
+            for (let c = 2; c < 16; c++) {
+                if (cimpIndex < cimpTools.length) {
+                    placeTool(cimpTools[cimpIndex++], r, c);
+                }
+            }
+        }
+    }
+
+    // --- RENDERING & UI FUNCTIONS ---
+
+    function toggleLanguage() {
+        currentLanguage = currentLanguage === 'en' ? 'ja' : 'en';
+        updateUIText();
+    }
+
+    function updateUIText() {
+        const t = translations[currentLanguage];
+        document.documentElement.lang = currentLanguage;
+        document.getElementById('mainTitle').textContent = t.mainTitle;
+        document.getElementById('headerLogo').textContent = t.headerLogo;
+        document.getElementById('languageToggleBtn').textContent = t.languageToggle;
+        document.getElementById('footerLine1').textContent = t.footerLine1;
+        document.getElementById('footerLine2').textContent = t.footerLine2;
+        document.getElementById('searchToolInput').placeholder = t.searchInputPlaceholder;
+        document.getElementById('categoryLegendTitle').textContent = t.categoryLegendTitle;
+        document.getElementById('dmaicLegendTitle').textContent = t.dmaicLegendTitle;
+        document.getElementById('difficultyLegendTitle').textContent = t.difficultyLegendTitle;
+        document.getElementById('suggesterTitle').textContent = t.suggesterTitle;
+        document.getElementById('suggesterDescription').textContent = t.suggesterDescription;
+        document.getElementById('problemDescription').placeholder = t.suggesterPlaceholder;
+        document.getElementById('suggestBtn').innerHTML = t.suggestBtn;
+        document.getElementById('clearBtn').textContent = t.clearBtn;
+        
+        document.querySelectorAll('.modal-section h3[data-translate]').forEach(el => {
+            const key = el.dataset.translate;
+            if (key && t.modal[key]) el.textContent = t.modal[key];
+        });
+        document.getElementById('explainToolBtn').innerHTML = t.modal.explainThisTool;
+        document.querySelector('[data-translate-placeholder="aiExplanationPlaceholder"]').textContent = t.modal.aiExplanationPlaceholder;
+        
+        populateLegends();
+        renderTable();
+    }
+
+    function renderTable() {
+        periodicTableContainer.innerHTML = '';
+        const searchTerm = searchInput.value.toLowerCase();
+        gridLayout.forEach((rowArray, rowIndex) => {
+            rowArray.forEach((toolIdInLayout, colIndex) => {
+                const cell = document.createElement('div');
+                const tool = toolsData.find(t => t.id === toolIdInLayout);
+                if (tool) {
+                    // Tile color now correctly comes from difficulty-based style
+                    cell.className = `table-cell ${tool.style.bg} ${tool.style.text}`;
+                    cell.setAttribute('data-symbol', tool.symbol);
+                    cell.innerHTML = `
+                        <span class="tool-number">${tool.number || ''}</span>
+                        <span class="tool-symbol">${tool.symbol}</span>
+                        <span class="tool-name">${tool.name[currentLanguage]}</span>`;
+                    cell.onclick = () => showToolDetails(tool.id);
+
+                    let passesFilter = true;
+                    if (activeFilters.type && activeFilters.value !== 'all') {
+                         if (activeFilters.type === 'category') {
+                            passesFilter = tool.categories.en.includes(activeFilters.value);
+                         }
+                         else if (activeFilters.type === 'dmaic') passesFilter = tool.dmaicPhases.en.includes(activeFilters.value);
+                         else if (activeFilters.type === 'difficulty') passesFilter = tool.difficulty === activeFilters.value;
+                    }
+                    let matchesSearch = !searchTerm || tool.name.en.toLowerCase().includes(searchTerm) || tool.name.ja.toLowerCase().includes(searchTerm) || tool.symbol.toLowerCase().includes(searchTerm);
+                    
+                    if (!passesFilter || !matchesSearch) cell.classList.add('filtered-out');
+                    if (searchTerm && matchesSearch) cell.classList.add('highlighted');
+
+                } else {
+                    cell.className = 'empty-cell';
+                }
+                cell.style.gridRowStart = rowIndex + 1;
+                cell.style.gridColumnStart = colIndex + 1;
+                periodicTableContainer.appendChild(cell);
+            });
+        });
+    }
+
+    function showToolDetails(toolId) {
+        const tool = toolsData.find(t => t.id === toolId);
+        if (!tool || !modal) return;
+        
+        const t = translations[currentLanguage];
+        
+        document.getElementById('modalToolSymbol').textContent = '';
+        const symbolText = document.createTextNode(`${tool.symbol}`);
+        document.getElementById('modalToolSymbol').appendChild(symbolText);
+        
+        // Modal symbol color also reflects difficulty
+        document.getElementById('modalToolSymbol').className = `modal-tool-symbol ${tool.style.bg} ${tool.style.text}`;
+        document.getElementById('modalToolNameFull').textContent = tool.name[currentLanguage];
+        
+        document.getElementById('modalToolCategories').textContent = tool.categories[currentLanguage].join(', ') || 'N/A';
+        document.getElementById('modalDmaicPhase').textContent = tool.dmaicPhases[currentLanguage].join(', ') || 'N/A';
+        document.getElementById('modalPurpose').textContent = tool.purpose[currentLanguage] || 'Details not available.';
+        document.getElementById('modalDescription').innerHTML = tool.description[currentLanguage] ? `<p>${tool.description[currentLanguage].replace(/\n/g, '</p><p>')}</p>` : '<p>Details not available.</p>';
+        document.getElementById('modalRelatedTools').textContent = tool.relatedTools[currentLanguage].join(', ') || 'N/A';
+        
+        document.getElementById('aiExplanation').innerHTML = t.modal.aiExplanationPlaceholder;
+        document.getElementById('aiExplanation').classList.remove('text-red-500');
+        document.getElementById('explainToolBtn').onclick = () => getAiExplanation(tool.id);
+
+        const linksContainer = document.getElementById('modalLinksContainer');
+        linksContainer.innerHTML = '';
+        let hasLinks = false;
+        if (tool.cimpLinkAL) {
+            const alLink = document.createElement('a'); alLink.href = tool.cimpLinkAL;
+            alLink.textContent = t.modal.viewALResource; alLink.target = "_blank";
+            linksContainer.appendChild(alLink); hasLinks = true;
+        }
+        if (tool.cimpLinkExternal) {
+            const externalLink = document.createElement('a'); externalLink.href = tool.cimpLinkExternal;
+            externalLink.textContent = t.modal.viewExternalResource; externalLink.target = "_blank";
+            linksContainer.appendChild(externalLink); hasLinks = true;
+        }
+        document.getElementById('modalMoreInfoSection').style.display = hasLinks ? 'block' : 'none';
+        
+        modal.style.display = 'block';
+    }
+
+    function closeModal() {
+        if (modal) modal.style.display = 'none';
+    }
+
+    function populateLegends() {
+        const categoryLegendContainer = document.getElementById('categoryLegendDisplay');
+        const dmaicLegendContainer = document.getElementById('dmaicLegendDisplay');
+        const difficultyLegendContainer = document.getElementById('difficultyLegendDisplay');
+        
+        categoryLegendContainer.innerHTML = '';
+        dmaicLegendContainer.innerHTML = '';
+        difficultyLegendContainer.innerHTML = '';
+        
+        const t = translations[currentLanguage];
+        
+        // --- "Show All" Button ---
+        const showAllItem = createLegendItem(t.showAll, 'ALL_TOOLS', 'all', 'all', {bg: 'bg-slate-500', text: 'text-white'});
+        categoryLegendContainer.appendChild(showAllItem);
+        if (!activeFilters.type) showAllItem.classList.add('active-filter');
+
+        // --- Category Filter Buttons (Individual Colors) ---
+        const categoryTranslationsMap = toolsData.length > 0 ? toolsData.reduce((acc, tool) => {
+            tool.categories.en.forEach((enCat, index) => {
+                if (!acc[enCat]) acc[enCat] = tool.categories.ja[index] || enCat;
+            });
+            return acc;
+        }, {}) : {};
+
+        Object.keys(categoryStyles).sort().forEach(catNameEN => {
+            if (catNameEN === 'Default') return;
+
+            const catNameUI = (currentLanguage === 'ja' && categoryTranslationsMap[catNameEN]) ? categoryTranslationsMap[catNameEN] : catNameEN;
+            const style = categoryStyles[catNameEN];
+            const item = createLegendItem(catNameUI, catNameEN, 'category', catNameEN, style);
+            
+            if (activeFilters.type === 'category' && activeFilters.value === catNameEN) {
+                item.classList.add('active-filter');
+            }
+            categoryLegendContainer.appendChild(item);
+        });
+
+        // --- DMAIC Phase Filter Buttons (Uniform Color) ---
+        Object.keys(t.dmaic).forEach(phaseKey => {
+            const item = createLegendItem(t.dmaic[phaseKey], phaseKey, 'dmaic', phaseKey, {bg: 'bg-gray-600', text: 'text-white'});
+             if (activeFilters.type === 'dmaic' && activeFilters.value === phaseKey) item.classList.add('active-filter');
+            dmaicLegendContainer.appendChild(item);
+        });
+        
+        // --- Difficulty Filter Buttons (Individual Colors) ---
+        const difficultyTranslations = t.difficultyLevels;
+        Object.keys(difficultyStyles).forEach(level => {
+            if (level === 'Default') return;
+            const style = difficultyStyles[level];
+            const item = createLegendItem(difficultyTranslations[level], level, 'difficulty', level, style);
+            if (activeFilters.type === 'difficulty' && activeFilters.value === level) item.classList.add('active-filter');
+            difficultyLegendContainer.appendChild(item);
+        });
+    }
+
+    function createLegendItem(text, dataValue, type, value, style) {
+        const item = document.createElement('div');
+        item.className = `legend-item ${style.bg} ${style.text}`;
+        item.textContent = text;
+        item.dataset.filterType = type;
+        item.dataset.filterValue = String(value); 
+        item.onclick = (e) => applyFilter(e.currentTarget, type, value);
+        return item;
+    }
+
+    function applyFilter(element, type, value) {
+        const isCurrentlyActive = element.classList.contains('active-filter');
+        document.querySelectorAll('.legend-item').forEach(el => el.classList.remove('active-filter'));
+        
+        if (type === 'all' || isCurrentlyActive) {
+             activeFilters = { type: null, value: null };
+             document.querySelector('.legend-item[data-filter-type="all"]').classList.add('active-filter');
+        } else {
+             activeFilters = { type, value };
+             element.classList.add('active-filter');
+        }
+        renderTable();
+    }
+
+    // --- GEMINI API FUNCTIONS ---
+
+    async function callGemini(prompt, isJson = false) {
+       const apiKey = ""; // This will be automatically provided by the Canvas environment.
+       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+       const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+       if (isJson) payload.generationConfig = { responseMimeType: "application/json" };
+       try {
+           const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+           if (!response.ok) throw new Error(`API call failed: ${response.status}`);
+           const result = await response.json();
+           if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+               return result.candidates[0].content.parts[0].text;
+           }
+           throw new Error("Invalid API response structure.");
+       } catch (error) {
+           console.error("Gemini API Error:", error);
+           return null;
+       }
+    }
+    
+    async function getAiExplanation(toolId) {
+        const tool = toolsData.find(t => t.id === toolId);
+        if (!tool) return;
+        
+        const explanationDiv = document.getElementById('aiExplanation');
+        const loader = document.getElementById('aiExplanationLoader');
+        loader.style.display = 'block';
+        explanationDiv.textContent = '';
+
+        const prompt = currentLanguage === 'ja'
+            ? `品質ツール「${tool.name.ja}」を簡単な言葉で説明してください。主な目的（「${tool.purpose.ja}」）は何ですか？それがどのように使われるか、簡単で実用的な実世界の例を挙げてください。説明全体を2～3の短い段落にまとめてください。`
+            : `Explain the quality tool "${tool.name.en}" in simple terms. What is its main purpose ("${tool.purpose.en}")? Provide a simple, practical, real-world example of how it might be used. Keep the entire explanation to about 2-3 short paragraphs.`;
+        
+        const explanation = await callGemini(prompt);
+        loader.style.display = 'none';
+
+        if (explanation) {
+            explanationDiv.innerHTML = explanation.replace(/\n/g, '<br>');
+            explanationDiv.classList.remove('text-red-500');
+        } else {
+            explanationDiv.textContent = translations[currentLanguage].modal.aiError;
+            explanationDiv.classList.add('text-red-500');
+        }
+    }
+
+    async function suggestTools() {
+        const problem = document.getElementById('problemDescription').value;
+        const t = translations[currentLanguage];
+        const errorDiv = document.getElementById('suggestionErrorMsg');
+        errorDiv.style.display = 'none';
+
+        if (!problem.trim()) { 
+            errorDiv.textContent = t.modal.problemDescriptionAlert;
+            errorDiv.style.display = 'block';
+            return; 
+        }
+
+        const loader = document.getElementById('suggestionLoader');
+        const resultDiv = document.getElementById('suggestionResult');
+        const toolsContainer = document.getElementById('suggestedToolsContainer');
+        const actionPlanContainer = document.getElementById('actionPlanResult');
+        loader.style.display = 'block';
+        resultDiv.innerHTML = toolsContainer.innerHTML = actionPlanContainer.innerHTML = '';
+        clearSuggestionHighlights();
+
+        const toolList = toolsData.map(tool => `- ${tool.name[currentLanguage]} (記号: ${tool.symbol}): ${tool.purpose[currentLanguage]}`).join('\n');
+        const prompt = currentLanguage === 'ja'
+            ? `品質問題があります：「${problem}」。この問題に基づいて、以下の品質ツールのうちどれが最も役立ちますか？3から5つのツールを提案してください。\n\n利用可能なツール：\n${toolList}\n\nあなたの回答は、次の2つのキーを持つJSONオブジェクトでなければなりません：\n1. "reasoning": この特定の問題に対してこれらのツールを選んだ理由を、短い一段落で説明してください。この説明では、提案されたツールのフルネームに言及する必要があります。\n2. "suggestions": 提案されたツールの正確な記号の文字列の配列。`
+            : `I have a quality problem: "${problem}".\n\nBased on this problem, which of the following quality tools would be most useful? Please suggest 3 to 5 tools.\n\nAvailable tools:\n${toolList}\n\nYour response must be a JSON object with two keys:\n1. "reasoning": A short, one-paragraph explanation of why you chose these tools for this specific problem. Mention the full names of the suggested tools.\n2. "suggestions": An array of strings, where each string is the exact symbol of a suggested tool.`;
+        
+        const response = await callGemini(prompt, true);
+        loader.style.display = 'none';
+
+        if (response) {
+            try {
+                const parsed = JSON.parse(response);
+                resultDiv.innerHTML = `<p class="p-2 bg-blue-50 border border-blue-200 rounded-md">${parsed.reasoning}</p>`;
+                
+                const suggestedSymbols = parsed.suggestions || [];
+                suggestedSymbols.forEach(symbol => {
+                    const tool = toolsData.find(t => t.symbol === symbol);
+                    if(tool) {
+                        const toolDiv = document.createElement('div');
+                        toolDiv.className = 'flex justify-between items-center bg-gray-100 p-2 rounded-lg';
+                        toolDiv.innerHTML = `
+                            <span class="font-semibold">${tool.name[currentLanguage]} (${tool.symbol})</span>
+                            <button class="text-xs bg-green-600 text-white font-semibold px-3 py-1 rounded-md hover:bg-green-700" onclick="getActionPlan('${tool.symbol}', \`${problem.replace(/"/g, '\\"')}\`)">${t.actionPlanBtn}</button>`;
+                        toolsContainer.appendChild(toolDiv);
+                    }
+                });
+
+                document.querySelectorAll('.table-cell[data-symbol]').forEach(cell => {
+                    const symbol = cell.getAttribute('data-symbol');
+                    if (suggestedSymbols.includes(symbol)) {
+                        cell.classList.add('suggested-highlight');
+                        cell.classList.remove('filtered-out');
+                    } else {
+                        cell.classList.add('filtered-out');
+                    }
+                });
+            } catch(e) {
+                resultDiv.innerHTML = `<p class="text-red-500">${t.modal.suggestionParseError}</p>`;
+            }
+        } else {
+             resultDiv.innerHTML = `<p class="text-red-500">${t.modal.suggestionError}</p>`;
+        }
+    }
+
+    async function getActionPlan(toolSymbol, problemDescription) {
+        const tool = toolsData.find(t => t.symbol === toolSymbol);
+        const t = translations[currentLanguage];
+        if (!tool) return;
+
+        const actionPlanContainer = document.getElementById('actionPlanResult');
+        actionPlanContainer.innerHTML = `<div class="flex justify-center items-center p-4"><div class="loader"></div></div>`;
+        const prompt = currentLanguage === 'ja'
+            ? `問題は「${problemDescription}」です。この問題を解決するために、品質ツール「${tool.name.ja}」を使用するための、簡潔で実用的なステップバイステップの実行計画を作成してください。計画は3〜5の主要なステップで構成し、各ステップには短い説明を付けてください。箇条書きで回答してください。`
+            : `The problem is: "${problemDescription}". Create a concise, practical, step-by-step action plan for using the C-IMP quality tool "${tool.name.en}" to address this problem. The plan should consist of 3-5 main steps, each with a brief description. Respond in a numbered list format.`;
+
+        const actionPlan = await callGemini(prompt);
+        if (actionPlan) {
+            let formattedPlan = actionPlan
+                .replace(/^(\d+\.|-|\*)\s/gm, '</li><li>')
+                .replace(/\n/g, '<br>');
+            
+            actionPlanContainer.innerHTML = `<div class="p-3 bg-green-50 border border-green-200 rounded-md"><ol class="list-decimal list-inside space-y-2"><li>${formattedPlan.substring(5)}</li></ol></div>`;
+        } else {
+            actionPlanContainer.innerHTML = `<p class="text-red-500">${t.modal.actionPlanError}</p>`;
+        }
+    }
+    
+    function clearSuggestion() {
+        document.getElementById('problemDescription').value = '';
+        document.getElementById('suggestionResult').innerHTML = '';
+        document.getElementById('suggestedToolsContainer').innerHTML = '';
+        document.getElementById('actionPlanResult').innerHTML = '';
+        document.getElementById('suggestionErrorMsg').style.display = 'none';
+        clearSuggestionHighlights();
+    }
+
+    function clearSuggestionHighlights() {
+        document.querySelectorAll('.table-cell').forEach(el => {
+            el.classList.remove('suggested-highlight', 'filtered-out');
+        });
+        applyFilter(document.querySelector('.legend-item.active-filter') || document.querySelector('.legend-item[data-filter-type="all"]'), 'all', 'all'); 
+    }
+
+    function setupEventListeners() {
+        document.getElementById('languageToggleBtn').addEventListener('click', toggleLanguage);
+        searchInput.addEventListener('input', renderTable);
+        document.getElementById('problemDescription').addEventListener('keyup', () => {
+             document.getElementById('suggestionErrorMsg').style.display = 'none';
+        });
+        window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+        window.onclick = (e) => { if (e.target == modal) closeModal(); }
+    }
+</script>
+
+</body>
+</html>
